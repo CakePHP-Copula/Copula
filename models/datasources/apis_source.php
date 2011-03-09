@@ -28,13 +28,14 @@ class ApisSource extends DataSource {
      * @var array
      */
     protected $options = array(
-        'protocol'   => 'http',
-        'format'     => 'json',
-        'user_agent' => 'cakephp apis datasource',
-        'http_port'  => 80,
-        'timeout'    => 10,
-        'login'      => null,
-        'token'      => null
+        'protocol'   		=> 'http',
+        'format'     		=> 'json',
+        'user_agent' 		=> 'cakephp apis datasource',
+        'http_port'  		=> 80,
+        'timeout'    		=> 10,
+        'login'      		=> null,
+        'token'      		=> null,
+        'param_separator'	=> '/',
     );
     
     protected $url = ':protocol://github.com/api/v2/:format/:path';
@@ -42,6 +43,8 @@ class ApisSource extends DataSource {
 	function __construct($config) {
 		App::import('Core', 'HttpSocket');
 		$this->socket = new HttpSocket();
+		if (!empty($config['login']))
+			$this->options['login'] = $config['login'];
 		parent::__construct($config);
 	}
 	
@@ -65,7 +68,8 @@ class ApisSource extends DataSource {
         $url = strtr($this->url, array(
             ':protocol' => $this->options['protocol'],
             ':format'   => $this->options['format'],
-            ':path'     => trim($params, '/')
+            ':path'     => trim($params, $this->options['param_separator']),
+            ':login'	=> $this->options['login'],
         ));
         
 		$response = $this->socket->{$options['method']}($url, $options['data']);
@@ -87,11 +91,11 @@ class ApisSource extends DataSource {
 	}
 	
 	function _buildParams($params = array(), $queryData = array()) {
-		$uri = '';
+		$uri = array();
 		foreach ($params as $param) {
 			if (!empty($queryData['conditions'][$param]))
-				$uri .= '/' . $queryData['conditions'][$param];
+				$uri[] = $queryData['conditions'][$param];
 		}
-		return $uri;
+		return implode($this->options['param_separator'], $uri);
 	}
 }
