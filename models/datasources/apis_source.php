@@ -24,21 +24,22 @@ class ApisSource extends DataSource {
 	var $socket;
 	
 	/**
-     * The http client options
-     * @var array
-     */
-    protected $options = array(
-        'protocol'   		=> 'http',
-        'format'     		=> 'json',
-        'user_agent' 		=> 'cakephp apis datasource',
-        'http_port'  		=> 80,
-        'timeout'    		=> 10,
-        'login'      		=> null,
-        'token'      		=> null,
-        'param_separator'	=> '/',
-    );
-    
-    protected $url = ':protocol://github.com/api/v2/:format/:path';
+	 * The http client options
+	 * @var array
+	 */
+	protected $options = array(
+		'protocol'   			=> 'http',
+		'format'     			=> 'json',
+		'user_agent' 			=> 'cakephp apis datasource',
+		'http_port'  			=> 80,
+		'timeout'    			=> 10,
+		'login'      			=> null,
+		'token'      			=> null,
+		'param_separator'		=> '/',
+		'key_value_separator'	=> '=',
+	);
+	
+	protected $url = ':protocol://github.com/api/v2/:format/:path';
 	
 	function __construct($config) {
 		App::import('Core', 'HttpSocket');
@@ -64,38 +65,38 @@ class ApisSource extends DataSource {
 			'data' => array(),
 		), $options);
 
-        // create full url
-        $url = strtr($this->url, array(
-            ':protocol' => $this->options['protocol'],
-            ':format'   => $this->options['format'],
-            ':path'     => trim($params, $this->options['param_separator']),
-            ':login'	=> $this->options['login'],
-        ));
-        
+		// create full url
+		$url = strtr($this->url, array(
+			':protocol' => $this->options['protocol'],
+			':format'   => $this->options['format'],
+			':path'     => trim($params, $this->options['param_separator']),
+			':login'	=> $this->options['login'],
+		));
 		$response = $this->socket->{$options['method']}($url, $options['data']);
-		
 		if ($this->options['format'] == 'json') {
-			$response = json_decode($response, true);
+			$response = json_decode(preg_replace('/.+?({.+}).+/', '$1', $response), true);
 		}
-		
 		return $response;
 	}
 
 	// TODO: Add support for true schemas
 	function describe($model) {
-	 	return $this->_schema['repositories'];
+		return $this->_schema['repositories'];
 	}
 	
 	function listSources() {
 		return array_keys($this->_schema);
 	}
 	
-	function _buildParams($params = array(), $queryData = array()) {
-		$uri = array();
+	function _buildParams($params = array(), $queryData = array(), $keyValue = false) {
+		$url = array();
 		foreach ($params as $param) {
-			if (!empty($queryData['conditions'][$param]))
-				$uri[] = $queryData['conditions'][$param];
+			if (!empty($queryData['conditions'][$param]) && $keyValue) {
+				$url[] = $param . $this->options['key_value_separator'] . $queryData['conditions'][$param];
+			} elseif (!empty($queryData['conditions'][$param])) {
+				$url[] = $queryData['conditions'][$param];
+			}
 		}
-		return implode($this->options['param_separator'], $uri);
+		return implode($this->options['param_separator'], $url);
 	}
 }
