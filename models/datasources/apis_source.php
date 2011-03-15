@@ -52,7 +52,7 @@ class ApisSource extends DataSource {
 	/**
 	 * Sends HttpSocket requests. Builds your uri and formats the response too.
 	 *
-	 * @param string $params 
+	 * @param string $params
 	 * @param array $options
 	 *		method: get, post, delete, put
 	 *		data: either in string form: "option1=foo&option2=bar" or as a keyed array: array('option1' => 'foo', 'option2' => 'bar')
@@ -64,7 +64,6 @@ class ApisSource extends DataSource {
 			'method' => 'get',
 			'data' => array(),
 		), $options);
-
 		// create full url
 		$url = strtr($this->url, array(
 			':protocol' => $this->options['protocol'],
@@ -73,8 +72,10 @@ class ApisSource extends DataSource {
 			':login'	=> $this->options['login'],
 		));
 		$response = $this->socket->{$options['method']}($url, $options['data']);
-		if ($this->options['format'] == 'json') {
-			$response = json_decode(preg_replace('/.+?({.+}).+/', '$1', $response), true);
+		if ($this->options['format'] == 'json' || $this->options['format'] == 'jsonp') {
+			if (!in_array(substr($response, 0, 1), array_merge(array('[', '{', '"', '-'), range(0, 9))))
+				$response = preg_replace('/.+?({.+}).+/', '$1', $response);
+			$response = json_decode($response, true);
 		}
 		return $response;
 	}
