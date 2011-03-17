@@ -73,7 +73,7 @@ class ApisSource extends DataSource {
 		));
 		$response = $this->socket->{$options['method']}($url, $options['data']);
 		if ($this->options['format'] == 'json' || $this->options['format'] == 'jsonp') {
-			if (!in_array(substr($response, 0, 1), array_merge(array('[', '{', '"', '-'), range(0, 9))))
+			if (!in_array(substr($response, 0, 1), array_merge(array('[', '{', '"', '-'), range(0, 9)), true))
 				$response = preg_replace('/.+?({.+}).+/', '$1', $response);
 			$response = json_decode($response, true);
 		}
