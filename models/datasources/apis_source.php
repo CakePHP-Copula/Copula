@@ -85,11 +85,6 @@ class ApisSource extends DataSource {
 		}
 		return $response;
 	}
-
-	// TODO: Add support for true schemas
-	function describe($model) {
-		return $this->_schema['repositories'];
-	}
 	
 	function listSources() {
 		return array_keys($this->_schema);
