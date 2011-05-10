@@ -49,7 +49,7 @@ class ApisSource extends DataSource {
 		if (!empty($config['login']))
 			$this->options['login'] = $config['login'];
 		$name = get_class($this);
-		if (Configure::load($name . '.' . $name))
+		if (Configure::load($name . '.' . Inflector::underscore($name)))
 			$this->map = Configure::read('Apis.' . $name);
 			
 		parent::__construct($config);
