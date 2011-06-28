@@ -102,9 +102,9 @@ class OauthComponent extends Object {
 	public function startup() {
 		foreach ($this->_config as $name => $options) {
 			$isAuthorized = false;
-			if ($this->accessTokenConfig()) {
+			if ($this->accessTokenConfig($name)) {
 				$isAuthorized = true;
-			} elseif ($this->accessTokenSession()) {
+			} elseif ($this->accessTokenSession($name)) {
 				$isAuthorized = true;
 				$this->_config[$name]['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
 				$this->_config[$name]['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
@@ -125,30 +125,38 @@ class OauthComponent extends Object {
 	 *
 	 * @return boolean
 	 */
-	public function accessTokenConfig($config = null) {
-		if (!$config) {
-			$config = $this->useDbConfig;
+	public function accessTokenConfig($dbConfig = null) {
+		if (!$dbConfig) {
+			$dbConfig = $this->useDbConfig;
 		}
-		return !empty($this->_config[$config]['oauth_token']) && !empty($this->_config[$config]['oauth_token_secret']);
+		return !empty($this->_config[$dbConfig]['oauth_token']) && !empty($this->_config[$dbConfig]['oauth_token_secret']);
 	}
 
 	/**
 	 * Returns true if OAuth credentials are in the session
-	 *
+	 * 
+	 * @param string $dbConfig
 	 * @return boolean
 	 */
-	public function accessTokenSession($config = null) {
-		if (!$config) {
-			$config = $this->useDbConfig;
+	public function accessTokenSession($dbConfig = null) {
+		if (!$dbConfig) {
+			$dbConfig = $this->useDbConfig;
 		}
-		return $this->Session->check('OAuth.'.$config.'.oauth_token') && $this->Session->check('OAuth.'.$config.'.oauth_token_secret');
+		return $this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret');
 	}
 	
-	private function _getMap($config = null) {
-		if (!$config) {
-			$config = $this->useDbConfig;
+	/**
+	 * Returns a configuration map from the specific datasource plugin
+	 *
+	 * @param string $config 
+	 * @return array $map
+	 * @author Dean Sofer
+	 */
+	private function _getMap($dbConfig = null) {
+		if (!$dbConfig) {
+			$dbConfig = $this->useDbConfig;
 		}
-		$driver = $this->_config[$config]['driver'];
+		$driver = $this->_config[$dbConfig]['driver'];
 		Configure::load($driver);
 		$api = pluginSplit($driver);
 		return Configure::read('Apis.'.$api[1]);
@@ -279,12 +287,14 @@ class OauthComponent extends Object {
 	 */
 	public function connect($redirect = null, $oAuthCallback = null) {
 
-		if (!empty($redirect)) {
+		if ($redirect) {
 			$this->Session->write('OAuth.'.$this->useDbConfig.'.redirect', $redirect);
 		}
 
-		if (empty($oAuthCallback)) {
+		if (!$oAuthCallback) {
 			$oAuthCallback = Router::url(array('action' => $this->useDbConfig.'_callback'), true);
+		} elseif (is_array($oAuthCallback)) {
+			$oAuthCallback = Router::url($oAuthCallback, true);
 		}
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key', true), $redirect);
