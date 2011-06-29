@@ -93,7 +93,7 @@ Class MyPlugin extends ApisSource {
 	public $tokens = array();
 	// Enable OAuth for the api
 	public function __construct($config) {
-		$config['method'] = 'OAuth';
+		$config['method'] = 'OAuth'; // or 'OAuthV2'
 		parent::__construct($config);
 	}
 	// Last minute tweaks

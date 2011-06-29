@@ -114,8 +114,10 @@ class ApisSource extends DataSource {
 			$request = array('uri' => $model);
 		}
 
-		if ($this->config['method'] == 'OAuth') {
+		if (isset($this->config['method']) && $this->config['method'] == 'OAuth') {
 			$request = $this->addOauth($model, $request);
+		} elseif (isset($this->config['method']) && $this->config['method'] == 'OAuthV2') {
+			$request = $this->addOauthV2($model, $request);
 		}
 
 		if (empty($request['uri']['host'])) {
@@ -196,6 +198,23 @@ class ApisSource extends DataSource {
 			$request['auth']['oauth_token'] = $this->config['oauth_token'];
 		}
 		if (isset($this->config['oauth_token_secret'])) {
+			$request['auth']['oauth_token_secret'] = $this->config['oauth_token_secret'];
+		}
+		return $request;
+	}
+	
+	/**
+	 * Supplements a request array with oauth credentials
+	 *
+	 * @param object $model 
+	 * @param array $request 
+	 * @return array $request
+	 */
+	public function addOauthV2(&$model, $request) {
+		$request['auth']['method'] = 'OAuth';
+		$request['auth']['client_id'] = $this->config['login'];
+		$request['auth']['client_secret'] = $this->config['password'];
+		if (isset($this->config['access_token'])) {
 			$request['auth']['oauth_token_secret'] = $this->config['oauth_token_secret'];
 		}
 		return $request;
