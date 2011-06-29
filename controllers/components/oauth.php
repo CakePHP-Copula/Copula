@@ -116,6 +116,8 @@ class OauthComponent extends Object {
 			$ds->config['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
 			$ds->config['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
 			$this->_config[$name]['isAuthorized'] = $isAuthorized;
+			$this->Session->write('OAuth.'.$name.'.oauth_consumer_key', $this->_config[$name]['login']);
+			$this->Session->write('OAuth.'.$name.'.oauth_consumer_secret', $this->_config[$name]['password']);
 			$this->Session->write('OAuth.'.$name.'.isAuthorized', $isAuthorized);
 		}
 	}
@@ -173,6 +175,7 @@ class OauthComponent extends Object {
 	 */
 	public function getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback) {
 		$map = $this->_getMap();
+
 		$request = Set::merge($this->_oAuthRequestDefaults, array(
 			'uri' => array(
 				'host' => $map['hosts']['oauth'],

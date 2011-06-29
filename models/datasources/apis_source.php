@@ -17,39 +17,53 @@ class ApisSource extends DataSource {
 	public $description = 'Apis DataSource';
 
 /**
- * Array containing the names of components this component uses. Component names
- * should not contain the "Component" portion of the classname.
+ * Holds the datasource configuration
  *
  * @var array
- * @access public
  */
-	var $config = array();
+	public $config = array();
 	
 	// TODO: Relocate to a dedicated schema file
-	var $_schema = array();
+	public $_schema = array();
 
 /**
  * Instance of CakePHP core HttpSocket class
  *
  * @var HttpSocket
  */
-	var $Http = null;
+	public $Http = null;
+
+/**
+ * Request Logs
+ *
+ * @var array
+ * @access private
+ */
+	private $__requestLog = array();
+	
+/**
+ * Request Log limit per entry in bytes
+ *
+ * @var integer
+ * @access protected
+ */
+	protected $_logLimitBytes = 5000;
 
 /**
  * Holds a configuration map
  *
- * @var string
- */
-	var $map = array();
-	
-/**
- * The http client options
  * @var array
  */
-	protected $options = array(
-		'format'     			=> 'json',
-		'param_separator'		=> '/',
-		'key_value_separator'	=> null,
+	public $map = array();
+	
+/**
+ * API options
+ * @var array
+ */
+	public $options = array(
+		'format'    => 'json',
+		'ps'		=> '&', // param separator
+		'kvs'		=> '=', // key-value separator
 	);
 
 /**
@@ -60,18 +74,23 @@ class ApisSource extends DataSource {
  */
 	public function __construct($config, $Http = null) {
 		parent::__construct($config);
-	
+		
 		// Store the HttpSocket reference
 		if (!$Http) {
-			App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
-			$Http = new HttpSocketOauth();
+			if (isset($config['method']) && $config['method'] = 'OAuth') {
+				App::import('Core', 'HttpSocketOauth.HttpSocketOauth');
+				$Http = new HttpSocketOauth();
+			} else {
+				App::import('Core', 'HttpSocket');
+				$Http = new HttpSocket();
+			}
 		}
 		$this->Http = $Http;
 	
 		// Store the API configuration map
-		$name = get_class($this);
-		if (Configure::load($name . '.' . Inflector::underscore($name))) {
-			$this->map = Configure::read('Apis.' . $name);
+		$name = pluginSplit($config['driver']);
+		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
+			$this->map = Configure::read('Apis.' . $name[1]);
 		}
 	}
 	
@@ -85,33 +104,64 @@ class ApisSource extends DataSource {
  * @return array $response
  * @author Dean Sofer
  */
-	function request(&$model, $url = null, $options = array()) {
+	public function request(&$model) {
+		
 		if (is_object($model)) {
-			if (!isset($model->request))
-				$model->request = array();
 			$request = $model->request;
 		} elseif (is_array($model)) {
 			$request = $model;
 		} elseif (is_string($model)) {
 			$request = array('uri' => $model);
 		}
-		
-		$request = $this->addOauth($model, $request);
 
-		// create full url
-		$request['uri']['scheme'] = $this->options['scheme'];
-		$request['uri']['host'] = $this->map['hosts']['rest'];
-			//'format'   => $this->options['format'],
-			//'path'     => trim($url, $this->options['param_separator']),
-			//'login'	=> $this->options['login'],
-			debug($request);
+		if ($this->config['method'] == 'OAuth') {
+			$request = $this->addOauth($model, $request);
+		}
+
+		if (empty($request['uri']['host'])) {
+			$request['uri']['host'] = $this->map['hosts']['rest'];
+		}
 
 		// Remove unwanted elements from request array
 		$request = array_intersect_key($request, $this->Http->request);
-
-		// Issues request
-		$response = $this->Http->request($request);
 		
+		if (method_exists($this, 'beforeRequest')) {
+			$request = $this->beforeRequest(&$model, $request);
+		}
+		
+		$timerStart = microtime(true);
+
+	    // Issues request
+	    $response = $this->Http->request($request);
+
+		$timerEnd = microtime(true);
+
+		// Log the request in the query log
+		if(Configure::read('debug')) {
+			$logText = '';
+			foreach(array('request','response') as $logPart) {
+				$logTextForThisPart = $this->Http->{$logPart}['raw'];
+				if($logPart == 'response') {
+					$logTextForThisPart = $logTextForThisPart['response'];
+				}
+				if(strlen($logTextForThisPart) > $this->_logLimitBytes) {
+					$logTextForThisPart = substr($logTextForThisPart, 0, $this->_logLimitBytes).' [ ... truncated ...]';
+				}
+				$logText .= '---'.strtoupper($logPart)."---\n".$logTextForThisPart."\n\n";
+			}
+			$took = round(($timerEnd - $timerStart)/1000);
+			$newLog = array(
+				'query' => $logText,
+				'error' => '',
+				'affected' => '',
+				'numRows' => '',
+				'took' => $took,
+			);
+			$this->__requestLog[] = $newLog;
+		}
+		
+		$response = $this->decode($response);
+
 		if (is_object($model)) {
 			$model->response = $response;
 		}
@@ -134,7 +184,7 @@ class ApisSource extends DataSource {
 	 * @param array $request 
 	 * @return array $request
 	 */
-	function addOauth(&$model, $request) {
+	public function addOauth(&$model, $request) {
 		$request['auth']['method'] = 'OAuth';
 		$request['auth']['oauth_consumer_key'] = $this->config['login'];
 		$request['auth']['oauth_consumer_secret'] = $this->config['password'];
@@ -154,7 +204,7 @@ class ApisSource extends DataSource {
 	 * @return void
 	 * @author Dean Sofer
 	 */
-	function decode($response) {
+	public function decode($response) {
 		// Get content type header
 		$contentType = $this->Http->response['header']['Content-Type'];
 
@@ -163,7 +213,7 @@ class ApisSource extends DataSource {
 			$contentType = $matches[1];
 			$charset = $matches[2];
 		}
-		
+
 		// Decode response according to content type
 		switch ($contentType) {
 			case 'application/xml':
@@ -190,10 +240,26 @@ class ApisSource extends DataSource {
 		return $response;
 	}
 	
-	function listSources() {
+	public function listSources() {
 		return array_keys($this->_schema);
 	}
 	
+	/**
+	 * Iterates through the tokens (passed or request items) and replaces them into the url
+	 *
+	 * @param string $url 
+	 * @param array $tokens optional
+	 * @return string $url
+	 * @author Dean Sofer
+	 */
+	public function swapTokens(&$model, $url, $tokens = array()) {
+		$formattedTokens = array();
+		foreach ($tokens as $token => $value) {
+			$formattedTokens[':'.$token] = $value;
+		}
+		$url = strtr($url, $formattedTokens);
+		return $url;
+	}
 	
 /**
  * Generates a conditions section of the url
@@ -203,19 +269,67 @@ class ApisSource extends DataSource {
  * @return string
  * @author Dean Sofer
  */
-	function buildQuery($params = array(), $data = array()) {
+	public function buildQuery($params = array(), $data = array()) {
 		$query = array();
 		foreach ($params as $param) {
-			if (!empty($data[$param]) && $this->options['key_value_separator']) {
-				$query[] = $param . $this->options['key_value_separator'] . $data[$param];
+			if (!empty($data[$param]) && $this->options['kvs']) {
+				$query[] = $param . $this->options['kvs'] . $data[$param];
 			} elseif (!empty($data[$param])) {
 				$query[] = $data[$param];
 			}
 		}
-		return implode($this->options['param_separator'], $query);
+		return implode($this->options['ps'], $query);
+	}
+	
+/**
+ * Tries iterating through the config map of REST commmands to decide which command to use
+ *
+ * @param object $model 
+ * @param string $action 
+ * @param string $section 
+ * @param array $params 
+ * @return boolean $found
+ * @author Dean Sofer
+ */
+	public function scanMap(&$model, $action, $section, $params = array()) {
+		$map = $this->map[$action][$section];
+		foreach ($map as $path => $conditions) {
+			$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
+			unset($conditions['optional']);
+			if (array_intersect(array_keys($params), $conditions) == $conditions) {
+				return array($path, $conditions, $optional);
+			}
+		}
+		return false;
+	}
+	
+/**
+ * Play nice with the DebugKit
+ *
+ * @param boolean sorted ignored
+ * @param boolean clear will clear the log if set to true (default)
+ * @return array of log requested
+ */
+	public function getLog($sorted = false, $clear = true){
+		$log = $this->__requestLog;
+		if($clear){
+			$this->__requestLog = array();
+		}
+		return array('log' => $log, 'count' => count($log), 'time' => 'Unknown');
 	}
 	
 	
+/**
+ * Just-In-Time callback for any last-minute request modifications
+ *
+ * @param object $model 
+ * @param array $request 
+ * @return array $request
+ * @author Dean Sofer
+ */
+	public function beforeRequest(&$model, $request) {
+		return $request;
+	}
 
 
 /**
@@ -227,28 +341,27 @@ class ApisSource extends DataSource {
  * @return mixed
  * @access public
  */
-	function read(&$model, $queryData = array()) {
+	public function read(&$model, $queryData = array()) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
 		$model->request = array_merge(array('method' => 'GET'), $model->request);
 		
-		if (!isset($queryData['conditions'])) {
-			$queryData['conditions'] = array();
-		}
-		if (!empty($this->map['read'][$queryData['fields']])) {
-			$map = $this->map['read'][$queryData['fields']];
-			foreach ($map as $path => $conditions) {
-				$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
-				unset($conditions['optional']);
-				if (array_intersect(array_keys($queryData['conditions']), $conditions) == $conditions) {
-					$model->request['uri']['path'] = $path;
-					$model->request['uri']['query'] = $this->buildQuery(array_merge($conditions, $optional), $queryData['conditions']);
-					return $this->request($model);
-				}
+		if (empty($model->request['uri']['path']) && !empty($queryData['path'])) {
+			$model->request['uri']['path'] = $queryData['path'];
+		} elseif (!empty($this->map['read']) && is_string($queryData['fields'])) {
+			if (!isset($queryData['conditions'])) {
+				$queryData['conditions'] = array();
+			}
+			$scan = $this->scanMap($model, 'read', $queryData['fields'], $queryData['conditions']);
+			if ($scan) {
+				$model->request['uri']['path'] = $scan[0];
+				$model->request['uri']['query'] = $this->buildQuery(array_merge($scan[1], $scan[2]), $queryData['conditions']);
+			} else {
+				return false;				
 			}
 		}
-		return false;
+		return $this->request($model);
 	}
 
 /**
@@ -261,6 +374,9 @@ class ApisSource extends DataSource {
 	public function create(&$model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
+		}
+		if (empty($model->request['body']) && !empty($fields) && !empty($values)) {
+			$model->request['body'] = array_combine($fields, $values);
 		}
 		$model->request = array_merge(array('method' => 'POST'), $model->request);
 		return $this->request($model);
@@ -276,6 +392,9 @@ class ApisSource extends DataSource {
 	public function update(&$model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
+		}
+		if (empty($model->request['body']) && !empty($fields) && !empty($values)) {
+			$model->request['body'] = array_combine($fields, $values);
 		}
 		$model->request = array_merge(array('method' => 'PUT'), $model->request);
 		return $this->request($model);
