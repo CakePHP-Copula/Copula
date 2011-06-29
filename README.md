@@ -77,6 +77,8 @@ $config['Apis']['MyPlugin']['delete'] = array(
 
 ### Creating a custom datasource 
 
+Try browsing the apis datasource and seeing what automagic functionality you can hook into!
+
 _[my_plugin]/models/datasources/apis/[my_plugin].php_
 
 ```
@@ -87,10 +89,14 @@ Class MyPlugin extends ApisSource {
 		'ps'		=> '&', // param separator
 		'kvs'		=> '=', // key-value separator
 	);
+	// Key => Values substitions in the uri-path right before the request is made. Scans uri-path for :keyname
+	public $tokens = array();
+	// Enable OAuth for the api
 	public function __construct($config) {
 		$config['method'] = 'OAuth';
 		parent::__construct($config);
 	}
+	// Last minute tweaks
 	public function beforeRequest(&$model, $request) {
 		$request['header']['x-li-format'] = $this->options['format'];
 		return $request;
@@ -167,6 +173,5 @@ function beforeFilter() {
 * **Complex query-building versatility:**
   Some APIs have multiple different ways of passing query params. Sometimes within the same request! I still need to flesh
   out param-building functions and options in the driver so that people extending the datasource have less work.
-* **Complex / unique OAuth configurations:**
-  Github does not use the standard 5 step OAuthentication process, and the parameter names are unique. It would be nice if
-  setting configuration options alone would cover these scenarios
+* **OAuth v2.0 Confirmed support:**
+  Github uses v2.0. I updated the component to work accordingly, however I have to test that the HttpSocketOauth can use it.

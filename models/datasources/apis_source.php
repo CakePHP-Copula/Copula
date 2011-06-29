@@ -125,6 +125,10 @@ class ApisSource extends DataSource {
 		// Remove unwanted elements from request array
 		$request = array_intersect_key($request, $this->Http->request);
 		
+		if (!empty($this->tokens)) {
+			$request['uri']['path'] = $this->swapTokens($model, $request['uri']['path'], $this->tokens);
+		}
+		
 		if (method_exists($this, 'beforeRequest')) {
 			$request = $this->beforeRequest(&$model, $request);
 		}
