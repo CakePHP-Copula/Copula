@@ -77,10 +77,12 @@ class OauthComponent extends Object {
 	 */
 	public function initialize(&$controller, $settings = array()) {
 		$this->controller =& $controller;
-		if (is_string($settings)) {
-			$this->useDbConfig = $settings;
-		}
+		
 		$settings = (array)$settings;
+		if (count($settings) === 1) {
+			$this->useDbConfig = $settings[0];
+		}
+		
 		foreach ($settings as $key => $setting) {
 			if (is_int($key)) {
 				$key = $setting;
