@@ -161,7 +161,11 @@ class OauthComponent extends Object {
 		$driver = $this->_config[$dbConfig]['driver'];
 		Configure::load($driver);
 		$api = pluginSplit($driver);
-		return Configure::read('Apis.'.$api[1]);
+		$map = Configure::read('Apis.' . $api[1]);
+		if (isset($map['oauth']['scheme'])) {
+			$this->_oAuthRequestDefaults['uri']['scheme'] = $map['oauth']['scheme'];
+		}
+		return $map;
 	}
 
 	/**
@@ -190,9 +194,7 @@ class OauthComponent extends Object {
 
 		App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
 		$Http = new HttpSocketOauth();
-
 		$response = $Http->request($request);
-
 		if ($Http->response['status']['code'] != 200) {
 			return false;
 		}
@@ -212,7 +214,7 @@ class OauthComponent extends Object {
 	 */
 	public function authorize($oAuthRequestToken) {
 		$map = $this->_getMap();
-		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $map['hosts']['oauth'] . $map['oauth']['authorize'] . '?oauth_token=' . $oAuthRequestToken;
+		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $map['hosts']['oauth'] . '/' . $map['oauth']['authorize'] . '?oauth_token=' . $oAuthRequestToken;
 		$this->controller->redirect($redirect);
 	}
 
