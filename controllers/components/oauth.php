@@ -131,7 +131,7 @@ class OauthComponent extends Object {
 		if (!$dbConfig) {
 			$dbConfig = $this->useDbConfig;
 		}
-		return !empty($this->_config[$dbConfig]['oauth_token']) && !empty($this->_config[$dbConfig]['oauth_token_secret']);
+		return !empty($this->_config[$dbConfig]['access_token']) || (!empty($this->_config[$dbConfig]['oauth_token']) && !empty($this->_config[$dbConfig]['oauth_token_secret']));
 	}
 
 	/**
@@ -144,28 +144,31 @@ class OauthComponent extends Object {
 		if (!$dbConfig) {
 			$dbConfig = $this->useDbConfig;
 		}
-		return $this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret');
+		return $this->Session->check('OAuth.'.$dbConfig.'.access_token') || ($this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret'));
 	}
 	
 	/**
 	 * Returns a configuration map from the specific datasource plugin
 	 *
 	 * @param string $config 
-	 * @return array $map
+	 * @return array $this->_map
 	 * @author Dean Sofer
 	 */
 	private function _getMap($dbConfig = null) {
+		if (!empty($this->_map)) {
+			return;
+		}
 		if (!$dbConfig) {
 			$dbConfig = $this->useDbConfig;
 		}
 		$driver = $this->_config[$dbConfig]['driver'];
 		Configure::load($driver);
 		$api = pluginSplit($driver);
-		$map = Configure::read('Apis.' . $api[1]);
-		if (isset($map['oauth']['scheme'])) {
-			$this->_oAuthRequestDefaults['uri']['scheme'] = $map['oauth']['scheme'];
+		$this->_map = Configure::read('Apis.' . $api[1]);
+		if (isset($this->_map['oauth']['scheme'])) {
+			$this->_oAuthRequestDefaults['uri']['scheme'] = $this->_map['oauth']['scheme'];
 		}
-		return $map;
+		$this->_map = $this->_map;
 	}
 
 	/**
@@ -178,12 +181,12 @@ class OauthComponent extends Object {
 	 * @return array Array containing keys oauth_token and oauth__token_secret
 	 */
 	public function getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback) {
-		$map = $this->_getMap();
+		$this->_getMap();
 
 		$request = Set::merge($this->_oAuthRequestDefaults, array(
 			'uri' => array(
-				'host' => $map['hosts']['oauth'],
-				'path' => $map['oauth']['request'],
+				'host' => $this->_map['hosts']['oauth'],
+				'path' => $this->_map['oauth']['request'],
 			),
 			'auth' => array(
 				'oauth_consumer_key' => $oAuthConsumerKey,
@@ -213,8 +216,20 @@ class OauthComponent extends Object {
 	 * @return void
 	 */
 	public function authorize($oAuthRequestToken) {
-		$map = $this->_getMap();
-		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $map['hosts']['oauth'] . '/' . $map['oauth']['authorize'] . '?oauth_token=' . $oAuthRequestToken;
+		$this->_getMap();
+		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $this->_map['hosts']['oauth'] . '/' . $this->_map['oauth']['authorize'] . '?oauth_token=' . $oAuthRequestToken;
+		$this->controller->redirect($redirect);
+	}
+	
+	/**
+	 * Same as above for OAuth v2.0
+	 * 
+	 * @param string $oAuthRequestToken
+	 * @return void
+	 */
+	public function authorizeV2($oAuthConsumerKey, $oAuthCallback) {
+		$this->_getMap();
+		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $this->_map['hosts']['oauth'] . '/' . $this->_map['oauth']['authorize'] . '?client_id=' . $oAuthConsumerKey . '&redirect_uri=' . $oAuthCallback;
 		$this->controller->redirect($redirect);
 	}
 
@@ -230,11 +245,11 @@ class OauthComponent extends Object {
 	 * @return array Array containing keys token and token_secret
 	 */
 	public function getOAuthAccessToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthRequestToken, $oAuthRequestTokenSecret, $oAuthVerifier) {
-		$map = $this->_getMap();
+		$this->_getMap();
 		$request = Set::merge($this->_oAuthRequestDefaults, array(
 			'uri' => array(
-				'host' => $map['hosts']['oauth'],
-				'path' => $map['oauth']['access'],
+				'host' => $this->_map['hosts']['oauth'],
+				'path' => $this->_map['oauth']['access'],
 			),
 			'auth' => array(
 				'oauth_consumer_key' => $oAuthConsumerKey,
@@ -258,6 +273,44 @@ class OauthComponent extends Object {
 
 		return $accessToken;
 
+	}
+	
+	/**
+	 * Same as above for OAuth v2.0
+	 *
+	 * @param string $oAuthConsumerKey 
+	 * @param string $oAuthConsumerSecret 
+	 * @param string $oAuthCode 
+	 * @return array Array containing keys token and token_secret
+	 * @author Dean Sofer
+	 */
+	public function getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode) {
+		$this->_getMap();
+		$request = Set::merge($this->_oAuthRequestDefaults, array(
+			'uri' => array(
+				'host' => $this->_map['hosts']['oauth'],
+				'path' => $this->_map['oauth']['access'],
+			),
+			'method' => 'POST',
+			'body' => array(
+				'client_id' => $oAuthConsumerKey,
+				'client_secret' => $oAuthConsumerSecret,
+				'code' => $oAuthCode,
+			)
+		));
+
+		App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
+		$Http = new HttpSocketOauth();
+
+		$response = $Http->request($request);
+
+		if ($Http->response['status']['code'] != 200) {
+			return false;
+		}
+
+		parse_str($response, $accessToken);
+
+		return $accessToken;
 	}
 
 	/**
@@ -291,7 +344,8 @@ class OauthComponent extends Object {
 	 * twitter_callback action in the current controller.
 	 */
 	public function connect($redirect = null, $oAuthCallback = null) {
-
+		$this->_getMap();
+		
 		if ($redirect) {
 			$this->Session->write('OAuth.'.$this->useDbConfig.'.redirect', $redirect);
 		}
@@ -310,17 +364,23 @@ class OauthComponent extends Object {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret', true), $redirect);
 		}
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
-
-		$requestToken = $this->getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback);
-
-		if ($requestToken) {
-			$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token', $requestToken['oauth_token']);
-			$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret', $requestToken['oauth_token_secret']);
-			$this->authorize($requestToken['oauth_token']);
-		} else {
-			$this->_error(__d('oauth', 'Could not get OAuth Request Token from '.$this->useDbConfig, true), $redirect);
-		}
 		
+		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
+			
+			$this->authorizeV2($oAuthConsumerKey, $oAuthCallback);
+			
+		} else {
+			
+			$requestToken = $this->getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback);
+
+			if ($requestToken) {
+				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token', $requestToken['oauth_token']);
+				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret', $requestToken['oauth_token_secret']);
+				$this->authorize($requestToken['oauth_token']);
+			} else {
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token from '.$this->useDbConfig, true), $redirect);
+			}
+		}	
 	}
 
 	/**
@@ -342,7 +402,8 @@ class OauthComponent extends Object {
 	 * out.
 	 */
 	public function callback($redirect = null) {
-
+		$this->_getMap();
+		
 		if (!$redirect && $this->Session->check('OAuth.'.$this->useDbConfig.'.redirect')) {
 			$redirect = $this->Session->read('OAuth.'.$this->useDbConfig.'.redirect');
 		}
@@ -357,23 +418,36 @@ class OauthComponent extends Object {
 		}
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
 
-		if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token')) {
-			$this->_error(__d('oauth', 'Could not get OAuth Request Token from session', true), $redirect);
+		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
+
+			if (empty($this->controller->params['url']['code'])) {
+				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig, true), $redirect);
+			}
+			$oAuthCode = $this->controller->params['url']['code'];
+			
+			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode);
+			
+		} else {
+			
+			if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token')) {
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token from session', true), $redirect);
+			}
+			$oAuthRequestToken = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token');
+
+			if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret')) {
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token Secret from session', true), $redirect);
+			}
+			$oAuthRequestTokenSecret = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret');
+
+			if (empty($this->controller->params['url']['oauth_verifier'])) {
+				$this->_error(__d('oauth', 'Could not get OAuth Verifier from querystring', true), $redirect);
+			}
+			$oAuthVerifier = $this->controller->params['url']['oauth_verifier'];
+
+			$accessToken = $this->getOAuthAccessToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthRequestToken, $oAuthRequestTokenSecret, $oAuthVerifier);
+			
 		}
-		$oAuthRequestToken = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token');
-
-		if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret')) {
-			$this->_error(__d('oauth', 'Could not get OAuth Request Token Secret from session', true), $redirect);
-		}
-		$oAuthRequestTokenSecret = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret');
-
-		if (empty($this->controller->params['url']['oauth_verifier'])) {
-			$this->_error(__d('oauth', 'Could not get OAuth Verifier from querystring', true), $redirect);
-		}
-		$oAuthVerifier = $this->controller->params['url']['oauth_verifier'];
-
-		$accessToken = $this->getOAuthAccessToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthRequestToken, $oAuthRequestTokenSecret, $oAuthVerifier);
-
+		
 		if ($accessToken) {
 
 			$sessionData = $this->Session->read('OAuth.'.$this->useDbConfig);
