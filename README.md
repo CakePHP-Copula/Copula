@@ -4,15 +4,15 @@ Since I started going through several restful apis things started to become repi
 
 ## Installation
 
-1. Clone or download to `plugins/apis`
+### Step 1: Clone or download to `plugins/apis`
 
-3. Add your configuration to `database.php` and set it to the model
+### Step 2: Add your configuration to `database.php` and set it to the model
 
-<pre><code>
+```
 :: database.php ::
 var $myapi = array(
 	'datasource' => 'Apis.Apis',
-	'driver' => 'ApiPluginName.ApiPluginName' // Example: 'Github.Github'
+	'driver' => 'MyPlugin.MyPlugin' // Example: 'Github.Github'
 	
 	// These are only required for authenticated requests (write-access)
 	'login' => '--Your API Key--',
@@ -21,6 +21,152 @@ var $myapi = array(
 
 :: my_model.php ::
 var $useDbConfig = 'myapi';
-</code></pre>
+```
 
-### Follow the api-specific instructions found in the respective plugin
+## Expanding functionality
+
+### Creating a configuration map
+
+_[my_plugin]/config/[my_plugin].php_
+
+REST paths must be ordered from most specific conditions to least (or none). This is because the map is iterated through
+until the first path which has all of its required conditions met is found. If a path has no required conditions, it will
+be used. Optional conditions aren't checked, but are added when building the request.
+
+```
+$config['Apis']['MyPlugin']['hosts'] = array(
+	'oauth' => 'api.myplugin.com/login/oauth',
+	'rest' => 'api.myplugin.com/v1',
+);
+$config['Apis']['MyPlugin']['oauth'] = array(
+	'authorize' => 'authorize', // Example URI: api.linkedin.com/uas/oauth/authorize
+	'request' => 'requestToken',
+	'access' => 'accessToken',
+	'login' => 'authenticate', // Like authorize, just auto-redirects
+	'logout' => 'invalidateToken',
+);
+$config['Apis']['MyPlugin']['read'] = array(
+	// field
+	'people' => array(
+		// api url
+		'people/id=' => array(
+			// required conditions
+			'id',
+		),
+		'people/url=' => array(
+			'url',
+		),
+		'people/~' => array(),
+	),
+	'people-search' => array(
+		'people-search' => array(
+		// optional conditions the api call can take
+			'optional' => array(
+				'keywords',
+			),
+		),
+	),
+);
+$config['Apis']['MyPlugin']['write'] = array(
+);
+$config['Apis']['MyPlugin']['update'] = array(
+);
+$config['Apis']['MyPlugin']['delete'] = array(
+);
+```
+
+### Creating a custom datasource 
+
+_[my_plugin]/models/datasources/apis/[my_plugin].php_
+
+```
+Class MyPlugin extends ApisSource {
+	// Examples of overriding methods & attributes:
+	public $options = array(
+		'format'    => 'json',
+		'ps'		=> '&', // param separator
+		'kvs'		=> '=', // key-value separator
+	);
+	public function __construct($config) {
+		$config['method'] = 'OAuth';
+		parent::__construct($config);
+	}
+	public function beforeRequest(&$model, $request) {
+		$request['header']['x-li-format'] = $this->options['format'];
+		return $request;
+	}
+}
+```
+
+### Creating a custom oauth component (recommended approach)
+
+_[my_plugin]/controllers/components/[my_plugin].php_
+
+```
+App::import('Component', 'Apis.Oauth');
+Class MyPluginComponent extends OauthComponent {
+	// Override & supplement your methods & attributes
+}
+```
+
+### On-the-fly customization
+Lets say you don't feel like bothering to make a new plugin just to support your api, or the existing plugin doesn't cover
+enough of the features. Good news! The plugin degrades gracefully and allows you to manually manipulate the request (thanks
+to NeilCrookes' RESTful plugin).
+
+Simply populate Model->request with any request params you wish and then fire off the related action. You can even continue
+using the `$data` & `$this->data` for `save()` and `update()` or pass a `'path'` key to `find()` and it will automagically
+be injected into your request object.
+
+## Adding OAuth Authentication (requires a configuration map)
+
+```
+MyController extends AppController {
+	var $components = array(
+		'Apis.Oauth' => 'linkedin',
+	);
+	
+	function connect() {
+		$this->Oauth->connect();
+	}
+	
+	function linkedin_callback() {
+		$this->Oauth->callback();
+	}
+}
+```
+
+You can also use multiple database configurations
+
+```
+var $components = array(
+	'Apis.Oauth' => array(
+		'linkedin',
+		'github',
+		'flickr',
+	);
+);
+```
+
+However this requires you to specify which config to use before calling authentication methods
+
+```
+function beforeFilter() {
+	$this->Oauth->useDbConfig = 'github';
+}
+```
+
+## Roadmap / Concerns
+
+**I'm eager to hear any recommendations or possible solutions.**
+
+* **More automagic**
+* **Better map scanning:**
+  I'm not sure of a good way to add map scanning to `save()`, `update()` and `delete()` methods yet since I have little control
+  over the arguments passed to the datasource. It is easy to supplement `find()` with information and utilize it for processing.
+* **Complex query-building versatility:**
+  Some APIs have multiple different ways of passing query params. Sometimes within the same request! I still need to flesh
+  out param-building functions and options in the driver so that people extending the datasource have less work.
+* **Complex / unique OAuth configurations:**
+  Github does not use the standard 5 step OAuthentication process, and the parameter names are unique. It would be nice if
+  setting configuration options alone would cover these scenarios
