@@ -74,10 +74,16 @@ class ApisSource extends DataSource {
  */
 	public function __construct($config, $Http = null) {
 		parent::__construct($config);
+
+		// Store the API configuration map
+		$name = pluginSplit($config['driver']);
+		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
+			$this->map = Configure::read('Apis.' . $name[1]);
+		}
 		
 		// Store the HttpSocket reference
 		if (!$Http) {
-			if (isset($config['method']) && $config['method'] = 'OAuth') {
+			if (isset($config['method']) && ($config['method'] = 'OAuth' || !empty($this->map['oauth']['version']))) {
 				App::import('Core', 'HttpSocketOauth.HttpSocketOauth');
 				$Http = new HttpSocketOauth();
 			} else {
@@ -86,12 +92,6 @@ class ApisSource extends DataSource {
 			}
 		}
 		$this->Http = $Http;
-	
-		// Store the API configuration map
-		$name = pluginSplit($config['driver']);
-		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
-			$this->map = Configure::read('Apis.' . $name[1]);
-		}
 	}
 	
 /**
@@ -122,6 +122,10 @@ class ApisSource extends DataSource {
 
 		if (empty($request['uri']['host'])) {
 			$request['uri']['host'] = $this->map['hosts']['rest'];
+		}
+
+		if (empty($request['uri']['scheme']) && !empty($this->map['oauth']['scheme'])) {
+			$request['uri']['scheme'] = $this->map['oauth']['scheme'];
 		}
 
 		// Remove unwanted elements from request array
@@ -212,10 +216,12 @@ class ApisSource extends DataSource {
 	 */
 	public function addOauthV2(&$model, $request) {
 		$request['auth']['method'] = 'OAuth';
+		$request['auth']['oauth_version'] = '2.0';
 		$request['auth']['client_id'] = $this->config['login'];
 		$request['auth']['client_secret'] = $this->config['password'];
 		if (isset($this->config['access_token'])) {
-			$request['auth']['oauth_token_secret'] = $this->config['oauth_token_secret'];
+			$request['auth']['access_token'] = $this->config['access_token'];
+			$request['uri']['query']['access_token'] = $this->config['access_token'];
 		}
 		return $request;
 	}
@@ -379,7 +385,11 @@ class ApisSource extends DataSource {
 			$scan = $this->scanMap($model, 'read', $queryData['fields'], $queryData['conditions']);
 			if ($scan) {
 				$model->request['uri']['path'] = $scan[0];
-				$model->request['uri']['query'] = $this->buildQuery(array_merge($scan[1], $scan[2]), $queryData['conditions']);
+				$model->request['uri']['query'] = array();
+				$usedConditions = array_intersect(array_keys($queryData['conditions']), array_merge($scan[1], $scan[2]));
+				foreach ($usedConditions as $condition) {
+					$model->request['uri']['query'][$condition] = $queryData['conditions'][$condition];
+				}
 			} else {
 				return false;				
 			}

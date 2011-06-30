@@ -108,15 +108,23 @@ class OauthComponent extends Object {
 				$isAuthorized = true;
 			} elseif ($this->accessTokenSession($name)) {
 				$isAuthorized = true;
-				$this->_config[$name]['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
-				$this->_config[$name]['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
+				if ($this->Session->check('OAuth.'.$name.'.access_token')) {
+					$this->_config[$name]['access_token'] = $this->Session->read('OAuth.'.$name.'.access_token');
+				} else {
+					$this->_config[$name]['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
+					$this->_config[$name]['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
+				}
 			}
 			
 			$ds = ConnectionManager::getDataSource($name);
 			$this->_config[$name] = $ds->config;
 			
-			$ds->config['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
-			$ds->config['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
+			if ($this->Session->check('OAuth.'.$name.'.access_token')) {
+				$ds->config['access_token'] = $this->Session->read('OAuth.'.$name.'.access_token');
+			} else {
+				$ds->config['oauth_token'] = $this->Session->read('OAuth.'.$name.'.oauth_token');
+				$ds->config['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
+			}
 			$this->_config[$name]['isAuthorized'] = $isAuthorized;
 			$this->Session->write('OAuth.'.$name.'.oauth_consumer_key', $this->_config[$name]['login']);
 			$this->Session->write('OAuth.'.$name.'.oauth_consumer_secret', $this->_config[$name]['password']);
@@ -350,7 +358,7 @@ class OauthComponent extends Object {
 	 */
 	public function connect($redirect = null, $oAuthCallback = null) {
 		$this->_getMap();
-		
+
 		if ($redirect) {
 			$this->Session->write('OAuth.'.$this->useDbConfig.'.redirect', $redirect);
 		}
