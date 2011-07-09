@@ -84,7 +84,7 @@ class ApisSource extends DataSource {
 		// Store the HttpSocket reference
 		if (!$Http) {
 			if (isset($config['method']) && ($config['method'] = 'OAuth' || !empty($this->map['oauth']['version']))) {
-				App::import('Core', 'HttpSocketOauth.HttpSocketOauth');
+				App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
 				$Http = new HttpSocketOauth();
 			} else {
 				App::import('Core', 'HttpSocket');
