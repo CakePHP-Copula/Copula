@@ -178,7 +178,6 @@ class OauthComponent extends Object {
 		if (isset($this->_map['oauth']['scheme'])) {
 			$this->_oAuthRequestDefaults['uri']['scheme'] = $this->_map['oauth']['scheme'];
 		}
-		$this->_map = $this->_map;
 	}
 
 	/**
