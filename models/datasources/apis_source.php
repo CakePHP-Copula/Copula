@@ -195,14 +195,16 @@ class ApisSource extends DataSource {
 	 * @return array $request
 	 */
 	public function addOauth(&$model, $request) {
-		$request['auth']['method'] = 'OAuth';
-		$request['auth']['oauth_consumer_key'] = $this->config['login'];
-		$request['auth']['oauth_consumer_secret'] = $this->config['password'];
-		if (isset($this->config['oauth_token'])) {
-			$request['auth']['oauth_token'] = $this->config['oauth_token'];
-		}
-		if (isset($this->config['oauth_token_secret'])) {
-			$request['auth']['oauth_token_secret'] = $this->config['oauth_token_secret'];
+		if (!empty($this->config['oauth_token']) && !empty($this->config['oauth_token_secret'])) {
+			$request['auth']['method'] = 'OAuth';
+			$request['auth']['oauth_consumer_key'] = $this->config['login'];
+			$request['auth']['oauth_consumer_secret'] = $this->config['password'];
+			if (isset($this->config['oauth_token'])) {
+				$request['auth']['oauth_token'] = $this->config['oauth_token'];
+			}
+			if (isset($this->config['oauth_token_secret'])) {
+				$request['auth']['oauth_token_secret'] = $this->config['oauth_token_secret'];
+			}
 		}
 		return $request;
 	}
@@ -215,13 +217,14 @@ class ApisSource extends DataSource {
 	 * @return array $request
 	 */
 	public function addOauthV2(&$model, $request) {
-		$request['auth']['method'] = 'OAuth';
-		$request['auth']['oauth_version'] = '2.0';
-		$request['auth']['client_id'] = $this->config['login'];
-		$request['auth']['client_secret'] = $this->config['password'];
-		if (isset($this->config['access_token'])) {
-			$request['auth']['access_token'] = $this->config['access_token'];
-			$request['uri']['query']['access_token'] = $this->config['access_token'];
+		if (!empty($this->config['access_token'])) {
+			$request['auth']['method'] = 'OAuth';
+			$request['auth']['oauth_version'] = '2.0';
+			$request['auth']['client_id'] = $this->config['login'];
+			$request['auth']['client_secret'] = $this->config['password'];
+			if (isset($this->config['access_token'])) {
+				$request['auth']['access_token'] = $this->config['access_token'];
+			}
 		}
 		return $request;
 	}
