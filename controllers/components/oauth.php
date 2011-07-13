@@ -172,9 +172,10 @@ class OauthComponent extends Object {
 			$dbConfig = $this->useDbConfig;
 		}
 		$driver = $this->_config[$dbConfig]['driver'];
-		Configure::load($driver);
-		$api = pluginSplit($driver);
-		$this->_map = Configure::read('Apis.' . $api[1]);
+		$name = pluginSplit($driver);
+		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
+			$this->_map = Configure::read('Apis.' . $name[1]);
+		}
 		if (isset($this->_map['oauth']['scheme'])) {
 			$this->_oAuthRequestDefaults['uri']['scheme'] = $this->_map['oauth']['scheme'];
 		}
