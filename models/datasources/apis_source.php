@@ -324,6 +324,10 @@ class ApisSource extends DataSource {
  * @author Dean Sofer
  */
 	public function scanMap(&$model, $action, $section, $params = array()) {
+		if (!isset($this->map[$action][$section])) {
+			$this->log('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
+			return false;
+		}
 		$map = $this->map[$action][$section];
 		foreach ($map as $path => $conditions) {
 			$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
