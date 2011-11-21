@@ -1,25 +1,24 @@
 # Apis Plugin
 
-Since I started going through several restful apis things started to become repitive. I decided to layout my code in a more 'proper ' fashion then.
+Since I started going through several restful apis things started to become repetitive. I decided to layout my code in a more 'proper ' fashion then.
 
 ## Installation
 
-### Step 1: Clone or download to `plugins/apis`
+### Step 1: Clone or download to `Plugin/Apis`
 
 ### Step 2: Add your configuration to `database.php` and set it to the model
 
 ```
 :: database.php ::
 var $myapi = array(
-	'datasource' => 'Apis.Apis',
-	'driver' => 'MyPlugin.MyPlugin' // Example: 'Github.Github'
+	'datasource' => 'MyPlugin.MyPlugin', // Example: 'Github.Github'
 	
 	// These are only required for authenticated requests (write-access)
 	'login' => '--Your API Key--',
 	'password' => '--Your API Secret--',
 );
 
-:: my_model.php ::
+:: MyModel.php ::
 var $useDbConfig = 'myapi';
 ```
 
@@ -27,7 +26,7 @@ var $useDbConfig = 'myapi';
 
 ### Creating a configuration map
 
-_[my_plugin]/config/[my_plugin].php_
+_[MyPlugin]/Config/[MyPlugin].php_
 
 REST paths must be ordered from most specific conditions to least (or none). This is because the map is iterated through
 until the first path which has all of its required conditions met is found. If a path has no required conditions, it will
@@ -79,7 +78,7 @@ $config['Apis']['MyPlugin']['delete'] = array(
 
 Try browsing the apis datasource and seeing what automagic functionality you can hook into!
 
-_[my_plugin]/models/datasources/apis/[my_plugin].php_
+_[MyPlugin]/Model/Datasource/[MyPlugin].php_
 
 ```
 Class MyPlugin extends ApisSource {
@@ -89,7 +88,7 @@ Class MyPlugin extends ApisSource {
 		'ps'		=> '&', // param separator
 		'kvs'		=> '=', // key-value separator
 	);
-	// Key => Values substitions in the uri-path right before the request is made. Scans uri-path for :keyname
+	// Key => Values substitutions in the uri-path right before the request is made. Scans uri-path for :keyname
 	public $tokens = array();
 	// Enable OAuth for the api
 	public function __construct($config) {
@@ -106,10 +105,10 @@ Class MyPlugin extends ApisSource {
 
 ### Creating a custom oauth component (recommended approach)
 
-_[my_plugin]/controllers/components/[my_plugin].php_
+_[MyPlugin]/Controller/Component/[MyPlugin].php_
 
 ```
-App::import('Component', 'Apis.Oauth');
+App::uses('Oauth', 'Apis.Component/Component');
 Class MyPluginComponent extends OauthComponent {
 	// Override & supplement your methods & attributes
 }

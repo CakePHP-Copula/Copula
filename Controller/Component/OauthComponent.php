@@ -30,7 +30,8 @@
  * @copyright (c) 2010 Neil Crookes
  * @license MIT License - http://www.opensource.org/licenses/mit-license.php
  */
-class OauthComponent extends Object {
+App::uses('Component', 'Controller');
+class OauthComponent extends Component {
 
 	/**
 	 * The other components used by this component
@@ -66,6 +67,8 @@ class OauthComponent extends Object {
 	 * @var string
 	 */
 	public $useDbConfig = null;
+	
+	var $controller;
 
 	/**
 	 * Called before Controller::beforeFilter(), stores reference to Controller
@@ -75,8 +78,8 @@ class OauthComponent extends Object {
 	 * @return void
 	 * @access public
 	 */
-	public function initialize(&$controller, $settings = array()) {
-		$this->controller =& $controller;
+	public function initialize($controller, $settings = array()) {
+		$this->controller = $controller;
 		
 		$settings = (array)$settings;
 		if (count($settings) === 1) {
@@ -205,7 +208,7 @@ class OauthComponent extends Object {
 			),
 		));
 
-		App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
+		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
 		$response = $Http->request($request);
 		if ($Http->response['status']['code'] != 200) {
@@ -273,7 +276,7 @@ class OauthComponent extends Object {
 			),
 		));
 
-		App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
+		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
 
 		$response = $Http->request($request);
@@ -312,7 +315,7 @@ class OauthComponent extends Object {
 			)
 		));
 
-		App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
+		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
 
 		$response = $Http->request($request);
@@ -369,12 +372,12 @@ class OauthComponent extends Object {
 			$oAuthCallback = Router::url($oAuthCallback, true);
 		}
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
-			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key', true), $redirect);
+			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key'), $redirect);
 		}
 		$oAuthConsumerKey = $this->_config[$this->useDbConfig]['login'];
 
 		if (!isset($this->_config[$this->useDbConfig]['password'])) {
-			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret', true), $redirect);
+			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret'), $redirect);
 		}
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
 		
@@ -391,7 +394,7 @@ class OauthComponent extends Object {
 				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret', $requestToken['oauth_token_secret']);
 				$this->authorize($requestToken['oauth_token']);
 			} else {
-				$this->_error(__d('oauth', 'Could not get OAuth Request Token from '.$this->useDbConfig, true), $redirect);
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token from '.$this->useDbConfig), $redirect);
 			}
 		}	
 	}
@@ -422,19 +425,19 @@ class OauthComponent extends Object {
 		}
 
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
-			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key', true), $redirect);
+			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key'), $redirect);
 		}
 		$oAuthConsumerKey = $this->_config[$this->useDbConfig]['login'];
 
 		if (!isset($this->_config[$this->useDbConfig]['password'])) {
-			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret', true), $redirect);
+			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret'), $redirect);
 		}
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
 
 		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
 
 			if (empty($this->controller->params['url']['code'])) {
-				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig, true), $redirect);
+				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig), $redirect);
 			}
 			$oAuthCode = $this->controller->params['url']['code'];
 			
@@ -443,17 +446,17 @@ class OauthComponent extends Object {
 		} else {
 			
 			if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token')) {
-				$this->_error(__d('oauth', 'Could not get OAuth Request Token from session', true), $redirect);
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token from session'), $redirect);
 			}
 			$oAuthRequestToken = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token');
 
 			if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret')) {
-				$this->_error(__d('oauth', 'Could not get OAuth Request Token Secret from session', true), $redirect);
+				$this->_error(__d('oauth', 'Could not get OAuth Request Token Secret from session'), $redirect);
 			}
 			$oAuthRequestTokenSecret = $this->Session->read('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret');
 
 			if (empty($this->controller->params['url']['oauth_verifier'])) {
-				$this->_error(__d('oauth', 'Could not get OAuth Verifier from querystring', true), $redirect);
+				$this->_error(__d('oauth', 'Could not get OAuth Verifier from querystring'), $redirect);
 			}
 			$oAuthVerifier = $this->controller->params['url']['oauth_verifier'];
 
@@ -468,13 +471,13 @@ class OauthComponent extends Object {
 			$this->Session->write('OAuth.'.$this->useDbConfig, $sessionData);
 
 			if ($redirect) {
-				$this->_error(__d('oauth', 'Successfully signed into '.$this->useDbConfig, true), $redirect);
+				$this->_error(__d('oauth', 'Successfully signed into '.$this->useDbConfig), $redirect);
 			} else {
 				die(pr($this->Session->read('OAuth.'.$this->useDbConfig)));
 			}
 			
 		} else {
-			$this->_error(__d('oauth', 'Could not get OAuth Access Token from '.$this->useDbConfig, true), $redirect);
+			$this->_error(__d('oauth', 'Could not get OAuth Access Token from '.$this->useDbConfig), $redirect);
 		}
 		
 	}
@@ -496,5 +499,4 @@ class OauthComponent extends Object {
 		die($message);
 		
 	}
-
 }

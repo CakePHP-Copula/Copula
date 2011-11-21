@@ -7,6 +7,7 @@
  * @package default
  * @author Dean Sofer
  **/
+App::uses('DataSource', 'Model/Datasource');
 class ApisSource extends DataSource {
 
 /**
@@ -76,15 +77,15 @@ class ApisSource extends DataSource {
 		parent::__construct($config);
 
 		// Store the API configuration map
-		$name = pluginSplit($config['driver']);
-		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
+		$name = pluginSplit($config['datasource']);
+		if (Configure::load($name[0] . '.' . $name[1])) {
 			$this->map = Configure::read('Apis.' . $name[1]);
 		}
 		
 		// Store the HttpSocket reference
 		if (!$Http) {
 			if (isset($config['method']) && ($config['method'] = 'OAuth' || !empty($this->map['oauth']['version']))) {
-				App::import('Lib', 'HttpSocketOauth.HttpSocketOauth');
+				App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 				$Http = new HttpSocketOauth();
 			} else {
 				App::import('Core', 'HttpSocket');
