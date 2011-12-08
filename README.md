@@ -81,6 +81,7 @@ Try browsing the apis datasource and seeing what automagic functionality you can
 _[MyPlugin]/Model/Datasource/[MyPlugin].php_
 
 ```
+App::uses('ApisSource', 'Apis.Model/Datasource'); 
 Class MyPlugin extends ApisSource {
 	// Examples of overriding methods & attributes:
 	public $options = array(
