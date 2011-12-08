@@ -88,7 +88,7 @@ class ApisSource extends DataSource {
 				App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 				$Http = new HttpSocketOauth();
 			} else {
-				App::import('Core', 'HttpSocket');
+				App::uses('HttpSocket', 'Network/Http');
 				$Http = new HttpSocket();
 			}
 		}
@@ -258,7 +258,7 @@ class ApisSource extends DataSource {
 				// Xml class. This can use a lot of memory so we have to manually
 				// garbage collect the Xml object when we've finished with it, i.e. got
 				// it to transform the xml string response into a php array.
-				App::import('Core', 'Xml');
+				App::uses('Xml', 'Utility');
 				$Xml = new Xml($response);
 				$response = $Xml->toArray(false); // Send false to get separate elements
 				$Xml->__destruct();
