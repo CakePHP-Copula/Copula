@@ -78,10 +78,12 @@ class ApisSource extends DataSource {
 
 		// Store the API configuration map
 		$name = pluginSplit($config['datasource']);
-		if (Configure::load($name[0] . '.' . $name[1])) {
+		if (!$this->map = Configure::read('Apis.' . $name[1])) {
+			Configure::load($name[0] . '.' . $name[1]);
 			$this->map = Configure::read('Apis.' . $name[1]);
 		}
 		
+
 		// Store the HttpSocket reference
 		if (!$Http) {
 			if (isset($config['method']) && ($config['method'] = 'OAuth' || !empty($this->map['oauth']['version']))) {
@@ -141,7 +143,7 @@ class ApisSource extends DataSource {
 		}
 		
 		$timerStart = microtime(true);
-
+		
 	    // Issues request
 	    $response = $this->Http->request($request);
 
@@ -320,11 +322,11 @@ class ApisSource extends DataSource {
  * @param object $model 
  * @param string $action 
  * @param string $section 
- * @param array $params 
+ * @param array $fields 
  * @return boolean $found
  * @author Dean Sofer
  */
-	public function scanMap(&$model, $action, $section, $params = array()) {
+	public function scanMap(&$model, $action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
 			$this->log('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
 			return false;
@@ -333,7 +335,7 @@ class ApisSource extends DataSource {
 		foreach ($map as $path => $conditions) {
 			$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
 			unset($conditions['optional']);
-			if (array_intersect(array_keys($params), $conditions) == $conditions) {
+			if (array_intersect($fields, $conditions) == $conditions) {
 				return array($path, $conditions, $optional);
 			}
 		}
@@ -390,7 +392,7 @@ class ApisSource extends DataSource {
 			if (!isset($queryData['conditions'])) {
 				$queryData['conditions'] = array();
 			}
-			$scan = $this->scanMap($model, 'read', $queryData['fields'], $queryData['conditions']);
+			$scan = $this->scanMap($model, 'read', array_keys($queryData['fields']), $queryData['conditions']);
 			if ($scan) {
 				$model->request['uri']['path'] = $scan[0];
 				$model->request['uri']['query'] = array();
@@ -420,6 +422,19 @@ class ApisSource extends DataSource {
 			$model->request['body'] = array_combine($fields, $values);
 		}
 		$model->request = array_merge(array('method' => 'POST'), $model->request);
+		if (!empty($this->map['write']) && in_array('section', $fields)) {
+			$scan = $this->scanMap($model, 'write', $fields['section'], $fields);
+			if ($scan) {
+				$model->request['uri']['path'] = $scan[0];
+				$model->request['uri']['query'] = array();
+				$usedFields = array_intersect($fields, array_merge($scan[1], $scan[2]));
+				foreach ($usedFields as $field) {
+					$model->request['uri']['query'][$field] = $fields[$field];
+				}
+			} else {
+				return false;				
+			}
+		}
 		return $this->request($model);
 	}
 
@@ -438,6 +453,19 @@ class ApisSource extends DataSource {
 			$model->request['body'] = array_combine($fields, $values);
 		}
 		$model->request = array_merge(array('method' => 'PUT'), $model->request);
+		if (!empty($this->map['update']) && in_array('section', $fields)) {
+			$scan = $this->scanMap($model, 'write', $fields['section'], $fields);
+			if ($scan) {
+				$model->request['uri']['path'] = $scan[0];
+				$model->request['uri']['query'] = array();
+				$usedFields = array_intersect($fields, array_merge($scan[1], $scan[2]));
+				foreach ($usedFields as $field) {
+					$model->request['uri']['query'][$field] = $fields[$field];
+				}
+			} else {
+				return false;				
+			}
+		}
 		return $this->request($model);
 	}
 

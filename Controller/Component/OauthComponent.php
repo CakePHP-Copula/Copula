@@ -78,10 +78,10 @@ class OauthComponent extends Component {
 	 * @return void
 	 * @access public
 	 */
-	public function initialize($controller, $settings = array()) {
+	public function initialize($controller) {
 		$this->controller = $controller;
 		
-		$settings = (array)$settings;
+		$settings = (array)$this->settings;
 		if (count($settings) === 1) {
 			$this->useDbConfig = $settings[0];
 		}
@@ -118,7 +118,7 @@ class OauthComponent extends Component {
 					$this->_config[$name]['oauth_token_secret'] = $this->Session->read('OAuth.'.$name.'.oauth_token_secret');
 				}
 			}
-			
+			App::uses('ConnectionManager', 'Model');
 			$ds = ConnectionManager::getDataSource($name);
 			$this->_config[$name] = $ds->config;
 			
@@ -174,9 +174,10 @@ class OauthComponent extends Component {
 		if (!$dbConfig) {
 			$dbConfig = $this->useDbConfig;
 		}
-		$driver = $this->_config[$dbConfig]['driver'];
-		$name = pluginSplit($driver);
-		if (Configure::load($name[0] . '.' . Inflector::underscore($name[1]))) {
+		$datasource = $this->_config[$dbConfig]['datasource'];
+		$name = pluginSplit($datasource);
+		if (!$this->_map = Configure::read('Apis.' . $name[1])) {
+			Configure::load($name[0] . '.' . $name[1]);
 			$this->_map = Configure::read('Apis.' . $name[1]);
 		}
 		if (isset($this->_map['oauth']['scheme'])) {
@@ -207,7 +208,6 @@ class OauthComponent extends Component {
 				'oauth_callback' => $oAuthCallback,
 			),
 		));
-
 		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
 		$response = $Http->request($request);
@@ -388,7 +388,7 @@ class OauthComponent extends Component {
 		} else {
 			
 			$requestToken = $this->getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback);
-
+			
 			if ($requestToken) {
 				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token', $requestToken['oauth_token']);
 				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret', $requestToken['oauth_token_secret']);
