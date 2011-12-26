@@ -108,7 +108,6 @@ class ApisSource extends DataSource {
  * @author Dean Sofer
  */
 	public function request(&$model) {
-		
 		if (is_object($model)) {
 			$request = $model->request;
 		} elseif (is_array($model)) {
@@ -141,7 +140,7 @@ class ApisSource extends DataSource {
 		if (method_exists($this, 'beforeRequest')) {
 			$request = $this->beforeRequest(&$model, $request);
 		}
-		
+
 		$timerStart = microtime(true);
 		
 	    // Issues request
@@ -422,18 +421,11 @@ class ApisSource extends DataSource {
 			$model->request['body'] = array_combine($fields, $values);
 		}
 		$model->request = array_merge(array('method' => 'POST'), $model->request);
-		if (!empty($this->map['write']) && in_array('section', $fields)) {
-			$scan = $this->scanMap($model, 'write', $fields['section'], $fields);
-			if ($scan) {
-				$model->request['uri']['path'] = $scan[0];
-				$model->request['uri']['query'] = array();
-				$usedFields = array_intersect($fields, array_merge($scan[1], $scan[2]));
-				foreach ($usedFields as $field) {
-					$model->request['uri']['query'][$field] = $fields[$field];
-				}
-			} else {
-				return false;				
-			}
+		$scan = $this->scanMap($model, 'create', $model->useTable, $fields);
+		if ($scan) {
+			$model->request['uri']['path'] = $scan[0];
+		} else {
+			return false;				
 		}
 		return $this->request($model);
 	}
@@ -457,11 +449,6 @@ class ApisSource extends DataSource {
 			$scan = $this->scanMap($model, 'write', $fields['section'], $fields);
 			if ($scan) {
 				$model->request['uri']['path'] = $scan[0];
-				$model->request['uri']['query'] = array();
-				$usedFields = array_intersect($fields, array_merge($scan[1], $scan[2]));
-				foreach ($usedFields as $field) {
-					$model->request['uri']['query'][$field] = $fields[$field];
-				}
 			} else {
 				return false;				
 			}
@@ -481,5 +468,13 @@ class ApisSource extends DataSource {
 		}
 		$model->request = array_merge(array('method' => 'DELETE'), $model->request);
 		return $this->request($model);
+	}
+
+	public function calculate($model, $func, $params = array()) {
+
+	}
+
+	public function getColumnType() {
+		return true;
 	}
 }
