@@ -96,6 +96,10 @@ class ApisSource extends DataSource {
 		}
 		$this->Http = $Http;
 	}
+
+	public function describe() {
+		return array();
+	}
 	
 /**
  * Sends HttpSocket requests. Builds your uri and formats the response too.
@@ -391,16 +395,12 @@ class ApisSource extends DataSource {
 			if (!isset($queryData['conditions'])) {
 				$queryData['conditions'] = array();
 			}
-			$scan = $this->scanMap($model, 'read', array_keys($queryData['fields']), $queryData['conditions']);
-			if ($scan) {
-				$model->request['uri']['path'] = $scan[0];
-				$model->request['uri']['query'] = array();
-				$usedConditions = array_intersect(array_keys($queryData['conditions']), array_merge($scan[1], $scan[2]));
-				foreach ($usedConditions as $condition) {
-					$model->request['uri']['query'][$condition] = $queryData['conditions'][$condition];
-				}
-			} else {
-				return false;				
+			$scan = $this->scanMap($model, 'read', $queryData['fields'], array_keys($queryData['conditions']));
+			$model->request['uri']['path'] = $scan[0];
+			$model->request['uri']['query'] = array();
+			$usedConditions = array_intersect(array_keys($queryData['conditions']), array_merge($scan[1], $scan[2]));
+			foreach ($usedConditions as $condition) {
+				$model->request['uri']['query'][$condition] = $queryData['conditions'][$condition];
 			}
 		}
 		return $this->request($model);
