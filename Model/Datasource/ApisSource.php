@@ -75,14 +75,14 @@ class ApisSource extends DataSource {
  */
 	public function __construct($config, $Http = null) {
 		parent::__construct($config);
-
+		if (!isset($this->config['database']))
+			$this->config['database'] = '';
 		// Store the API configuration map
 		$name = pluginSplit($config['datasource']);
 		if (!$this->map = Configure::read('Apis.' . $name[1])) {
 			Configure::load($name[0] . '.' . $name[1]);
 			$this->map = Configure::read('Apis.' . $name[1]);
 		}
-		
 
 		// Store the HttpSocket reference
 		if (!$Http) {
@@ -279,9 +279,9 @@ class ApisSource extends DataSource {
 		return $response;
 	}
 	
-	public function listSources() {
+	/*public function listSources() {
 		return array_keys($this->_schema);
-	}
+	}*/
 	
 	/**
 	 * Iterates through the tokens (passed or request items) and replaces them into the url
