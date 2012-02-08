@@ -144,6 +144,8 @@ class ApisSource extends DataSource {
 		if (method_exists($this, 'beforeRequest')) {
 			$request = $this->beforeRequest(&$model, $request);
 		}
+		
+		$model->request = $request;
 
 		$timerStart = microtime(true);
 		
