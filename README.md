@@ -22,7 +22,68 @@ var $myapi = array(
 var $useDbConfig = 'myapi';
 ```
 
+### Step 3: Authenticating (requires a configuration map)
+
+```
+MyController extends AppController {
+	var $components = array(
+		'Apis.Oauth' => 'linkedin', // name of the $dbConfig to use
+	);
+	
+	function connect() {
+		$this->Oauth->connect();
+	}
+	
+	function linkedin_callback() {
+		$this->Oauth->callback();
+	}
+}
+```
+
+You can also use multiple database configurations
+
+```
+var $components = array(
+	'Apis.Oauth' => array(
+		'linkedin',
+		'github',
+		'flickr',
+	);
+);
+```
+
+However this requires you to specify which config to use before calling authentication methods
+
+```
+function beforeFilter() {
+	$this->Oauth->useDbConfig = 'github';
+}
+```
+
+### Step 4: Querying the API
+
+Best to just give an example. I switch the datasource on the fly because the model is actually a `projects` table in the
+DB. I tend to query from my API and then switch to default and save the results.
+
+```
+Class Project extends AppModel {
+	function findAuthedUserRepos() {
+		$this->setDataSource('github');
+		$projects = $this->find('all', array(
+			'fields' => 'repos'
+		));
+		$this->setDataSource('default'); // if more queries are done later
+		return $projects;
+	}
+}
+```
+
 ## Expanding functionality
+
+__Checkout other plugins for examples__
+ * [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn)
+ * [Github](https://github.com/ProLoser/CakePHP-Github) which does OAuth v2
+ * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
 
 ### Creating a configuration map
 
@@ -76,7 +137,7 @@ $config['Apis']['MyPlugin']['delete'] = array(
 
 ### Creating a custom datasource 
 
-Try browsing the apis datasource and seeing what automagic functionality you can hook into!
+Try browsing the apis datasource and seeing what automagic functionality you can hook into.
 
 _[MyPlugin]/Model/Datasource/[MyPlugin].php_
 
@@ -124,44 +185,6 @@ Simply populate Model->request with any request params you wish and then fire of
 using the `$data` & `$this->data` for `save()` and `update()` or pass a `'path'` key to `find()` and it will automagically
 be injected into your request object.
 
-## Adding OAuth Authentication (requires a configuration map)
-
-```
-MyController extends AppController {
-	var $components = array(
-		'Apis.Oauth' => 'linkedin',
-	);
-	
-	function connect() {
-		$this->Oauth->connect();
-	}
-	
-	function linkedin_callback() {
-		$this->Oauth->callback();
-	}
-}
-```
-
-You can also use multiple database configurations
-
-```
-var $components = array(
-	'Apis.Oauth' => array(
-		'linkedin',
-		'github',
-		'flickr',
-	);
-);
-```
-
-However this requires you to specify which config to use before calling authentication methods
-
-```
-function beforeFilter() {
-	$this->Oauth->useDbConfig = 'github';
-}
-```
-
 ## Roadmap / Concerns
 
 **I'm eager to hear any recommendations or possible solutions.**
@@ -173,5 +196,3 @@ function beforeFilter() {
 * **Complex query-building versatility:**
   Some APIs have multiple different ways of passing query params. Sometimes within the same request! I still need to flesh
   out param-building functions and options in the driver so that people extending the datasource have less work.
-* **OAuth v2.0 Confirmed support:**
-  Github uses v2.0. I updated the component to work accordingly, however I have to test that the HttpSocketOauth can use it.
