@@ -81,6 +81,7 @@ Class Project extends AppModel {
 ## Expanding functionality
 
 __Checkout other plugins for examples__
+
  * [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn)
  * [Github](https://github.com/ProLoser/CakePHP-Github) which does OAuth v2
  * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
