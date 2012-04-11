@@ -2,6 +2,14 @@
 
 Since I started going through several restful apis things started to become repetitive. I decided to layout my code in a more 'proper ' fashion then.
 
+## Notes
+
+The ApiDatasource is an **abstract** class and must be extended by the Api Datasource you wish to support. For example, 
+I have [Github](https://github.com/ProLoser/CakePHP-Github/), [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn),
+[JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) and [Flickr](https://github.com/ProLoser/CakePHP-Flickr) 
+datasources, but it's extremely easy to add your own. Open a bug ticket if you find you're having difficulty and would 
+like some help. In addition, I would happily appreciate any documentation improvements that can be contributed!
+
 ## Installation
 
 ### Step 1: Clone or download to `Plugin/Apis`
