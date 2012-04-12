@@ -70,6 +70,8 @@ function beforeFilter() {
 
 ### Step 4: Querying the API
 
+> **NOTE:** You _must_ load the OauthComponent on any action that makes a call to the Api
+
 Best to just give an example. I switch the datasource on the fly because the model is actually a `projects` table in the
 DB. I tend to query from my API and then switch to default and save the results.
 
