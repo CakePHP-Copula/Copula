@@ -334,8 +334,7 @@ class ApisSource extends DataSource {
  */
 	public function scanMap(&$model, $action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
-			$this->log('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
-			return false;
+			throw new Exception('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
 		}
 		$map = $this->map[$action][$section];
 		foreach ($map as $path => $conditions) {
@@ -345,7 +344,7 @@ class ApisSource extends DataSource {
 				return array($path, $conditions, $optional);
 			}
 		}
-		return false;
+		throw new Exception('[ApiSource] Could not find a match for passed conditions');
 	}
 	
 /**
@@ -391,7 +390,6 @@ class ApisSource extends DataSource {
 			$model->request = array();
 		}
 		$model->request = array_merge(array('method' => 'GET'), $model->request);
-		
 		if (empty($model->request['uri']['path']) && !empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
 		} elseif (!empty($this->map['read']) && is_string($queryData['fields'])) {
