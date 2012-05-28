@@ -18,13 +18,6 @@
  * 2. Authorize the request token (and the app to interact with a users account)
  * 3. Get an OAuth Access Token
  *
- * See the methods below for doing these tasks. You can call these from your
- * controller. For example controller actions, see
- * TwitterAppController::connect() and TwitterAppController::callback() or you
- * can use the convenience methods in this component that provide all the
- * default functionality for you. See the connect() and callback() methods below
- * for details.
- *
  * @author Neil Crookes <neil@neilcrookes.com>, Dean Sofer <ProLoser>
  * @link http://www.neilcrookes.com, http://www.deansofer.com
  * @copyright (c) 2010 Neil Crookes
@@ -95,7 +88,7 @@ class OauthComponent extends Component {
 	}
 
 	/**
-	 * Checks if we are authorized to access a users Twitter account via the API
+	 * Checks if we are authorized to access a users Api account via the API
 	 * by first checking if the OAuth credentials are in the datasource config,
 	 * else if they are in the session. If they are not in the config but are in
 	 * the session, copy them into the datasource config. Finally, set the
@@ -186,8 +179,8 @@ class OauthComponent extends Component {
 	}
 
 	/**
-	 * The first stage of the OAuth Dance with Twitter. Gets OAuth Request Token
-	 * and OAuth Request Token Secret from Twitter.
+	 * The first stage of the OAuth Dance. Gets OAuth Request Token
+	 * and OAuth Request Token Secret from the API.
 	 *
 	 * @param string $oAuthConsumerKey
 	 * @param string $oAuthConsumerSecret
@@ -222,8 +215,8 @@ class OauthComponent extends Component {
 	}
 
 	/**
-	 * The second stage of the OAuth Dance with Twitter. Redirects the user to
-	 * Twitter so they can authorize your application.
+	 * The second stage of the OAuth Dance. Redirects the user to
+	 * the API website so they can authorize your application.
 	 * 
 	 * @param string $oAuthRequestToken
 	 * @return void
@@ -250,8 +243,8 @@ class OauthComponent extends Component {
 	}
 
 	/**
-	 * The third stage of the OAuth Dance with Twitter. Gets OAuth Access Token
-	 * and OAuth Access Token Secret from Twitter.
+	 * The third stage of the OAuth Dance. Gets OAuth Access Token
+	 * and OAuth Access Token Secret.
 	 * 
 	 * @param string $oAuthConsumerKey
 	 * @param string $oAuthConsumerSecret
@@ -337,7 +330,7 @@ class OauthComponent extends Component {
 	 * In your controller action you simply do:
 	 * 
 	 *		 public function twitter_connect($redirect = null) {
-	 *			 $this->TwitterAuth->connect(urldecode($redirect));
+	 *			 $this->Oauth->connect(urldecode($redirect));
 	 *		 }
 	 *
 	 * The method first tries to obtain any required data that is not supplied in
@@ -345,8 +338,7 @@ class OauthComponent extends Component {
 	 * happens if they are not specified.
 	 *
 	 * It then tries to get an OAuth Request Token and OAuth Request Token Secret
-	 * from Twitter then redirects the user to Twitter to authorize the OAuth
-	 * Request Token.
+	 * then redirects the user to the Api to authorize the OAuth Request Token.
 	 *
 	 * If for some reason we couldn't get a request token, an error message is set
 	 * in the session flash and the user is redirected to the redirect param. If
@@ -408,7 +400,7 @@ class OauthComponent extends Component {
 	 * In your controller action you simply do:
 	 * 
 	 *		 public function twitter_callback() {
-	 *			 $this->TwitterAuth->callback();
+	 *			 $this->Oauth->callback();
 	 *		 }
 	 * 
 	 * This method exchanges the authorised request token for the OAuth Access
