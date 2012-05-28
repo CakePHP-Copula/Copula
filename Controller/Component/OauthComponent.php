@@ -354,10 +354,6 @@ class OauthComponent extends Component {
 	public function connect($redirect = null, $oAuthCallback = null) {
 		$this->_getMap();
 
-		if ($redirect) {
-			$this->Session->write('OAuth.'.$this->useDbConfig.'.redirect', $redirect);
-		}
-
 		if (!$oAuthCallback) {
 			$oAuthCallback = Router::url(array('action' => $this->useDbConfig.'_callback'), true);
 		} elseif (is_array($oAuthCallback)) {
@@ -412,10 +408,6 @@ class OauthComponent extends Component {
 	public function callback($redirect = null) {
 		$this->_getMap();
 		
-		if (!$redirect && $this->Session->check('OAuth.'.$this->useDbConfig.'.redirect')) {
-			$redirect = $this->Session->read('OAuth.'.$this->useDbConfig.'.redirect');
-		}
-
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key'), $redirect);
 		}
@@ -457,7 +449,6 @@ class OauthComponent extends Component {
 		}
 		
 		if ($accessToken) {
-
 			$sessionData = $this->Session->read('OAuth.'.$this->useDbConfig);
 			$sessionData = array_merge($sessionData, $accessToken);
 			$this->Session->write('OAuth.'.$this->useDbConfig, $sessionData);
