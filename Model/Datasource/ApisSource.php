@@ -1,7 +1,7 @@
 <?php
 /**
  * Apis DataSource
- * 
+ *
  * [Short Description]
  *
  * @package default
@@ -23,7 +23,7 @@ class ApisSource extends DataSource {
  * @var array
  */
 	public $config = array();
-	
+
 	// TODO: Relocate to a dedicated schema file
 	public $_schema = array();
 
@@ -41,7 +41,7 @@ class ApisSource extends DataSource {
  * @access private
  */
 	private $__requestLog = array();
-	
+
 /**
  * Request Log limit per entry in bytes
  *
@@ -56,7 +56,7 @@ class ApisSource extends DataSource {
  * @var array
  */
 	public $map = array();
-	
+
 /**
  * API options
  * @var array
@@ -74,7 +74,6 @@ class ApisSource extends DataSource {
  * @param HttpSocket $Http
  */
 	public function __construct($config, $Http = null) {
-		parent::__construct($config);
 		if (!isset($this->config['database']))
 			$this->config['database'] = '';
 		// Store the API configuration map
@@ -86,7 +85,12 @@ class ApisSource extends DataSource {
 
 		// Store the HttpSocket reference
 		if (!$Http) {
-			if (isset($config['method']) && ($config['method'] = 'OAuth' || !empty($this->map['oauth']['version']))) {
+			if (!empty($this->map['oauth']['version'])) {
+				if ($this->map['oauth']['version'][0] == 2) {
+					$config['method'] = 'OAuthV2';
+				} else {
+					$config['method'] = 'OAuth';
+				}
 				App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 				$Http = new HttpSocketOauth();
 			} else {
@@ -95,12 +99,13 @@ class ApisSource extends DataSource {
 			}
 		}
 		$this->Http = $Http;
+		parent::__construct($config);
 	}
 
 	public function describe() {
 		return array();
 	}
-	
+
 /**
  * Sends HttpSocket requests. Builds your uri and formats the response too.
  *
@@ -136,19 +141,19 @@ class ApisSource extends DataSource {
 
 		// Remove unwanted elements from request array
 		$request = array_intersect_key($request, $this->Http->request);
-		
+
 		if (!empty($this->tokens)) {
 			$request['uri']['path'] = $this->swapTokens($model, $request['uri']['path'], $this->tokens);
 		}
-		
+
 		if (method_exists($this, 'beforeRequest')) {
 			$request = $this->beforeRequest(&$model, $request);
 		}
-		
+
 		$model->request = $request;
 
 		$timerStart = microtime(true);
-		
+
 	    // Issues request
 	    $response = $this->Http->request($request);
 
@@ -177,7 +182,7 @@ class ApisSource extends DataSource {
 			);
 			$this->__requestLog[] = $newLog;
 		}
-		
+
 		$response = $this->decode($response);
 
 		if (is_object($model)) {
@@ -191,15 +196,15 @@ class ApisSource extends DataSource {
 			}
 			return false;
 		}
-		
+
 		return $response;
 	}
-	
+
 	/**
 	 * Supplements a request array with oauth credentials
 	 *
-	 * @param object $model 
-	 * @param array $request 
+	 * @param object $model
+	 * @param array $request
 	 * @return array $request
 	 */
 	public function addOauth(&$model, $request) {
@@ -216,12 +221,12 @@ class ApisSource extends DataSource {
 		}
 		return $request;
 	}
-	
+
 	/**
 	 * Supplements a request array with oauth credentials
 	 *
-	 * @param object $model 
-	 * @param array $request 
+	 * @param object $model
+	 * @param array $request
 	 * @return array $request
 	 */
 	public function addOauthV2(&$model, $request) {
@@ -236,11 +241,11 @@ class ApisSource extends DataSource {
 		}
 		return $request;
 	}
-	
+
 	/**
 	 * Decodes the response based on the content type
 	 *
-	 * @param string $response 
+	 * @param string $response
 	 * @return void
 	 * @author Dean Sofer
 	 */
@@ -280,15 +285,15 @@ class ApisSource extends DataSource {
 		}
 		return $response;
 	}
-	
+
 	/*public function listSources() {
 		return array_keys($this->_schema);
 	}*/
-	
+
 	/**
 	 * Iterates through the tokens (passed or request items) and replaces them into the url
 	 *
-	 * @param string $url 
+	 * @param string $url
 	 * @param array $tokens optional
 	 * @return string $url
 	 * @author Dean Sofer
@@ -301,7 +306,7 @@ class ApisSource extends DataSource {
 		$url = strtr($url, $formattedTokens);
 		return $url;
 	}
-	
+
 /**
  * Generates a conditions section of the url
  *
@@ -321,14 +326,14 @@ class ApisSource extends DataSource {
 		}
 		return implode($this->options['ps'], $query);
 	}
-	
+
 /**
  * Tries iterating through the config map of REST commmands to decide which command to use
  *
- * @param object $model 
- * @param string $action 
- * @param string $section 
- * @param array $fields 
+ * @param object $model
+ * @param string $action
+ * @param string $section
+ * @param array $fields
  * @return boolean $found
  * @author Dean Sofer
  */
@@ -346,7 +351,7 @@ class ApisSource extends DataSource {
 		}
 		throw new Exception('[ApiSource] Could not find a match for passed conditions');
 	}
-	
+
 /**
  * Play nice with the DebugKit
  *
@@ -361,13 +366,13 @@ class ApisSource extends DataSource {
 		}
 		return array('log' => $log, 'count' => count($log), 'time' => 'Unknown');
 	}
-	
-	
+
+
 /**
  * Just-In-Time callback for any last-minute request modifications
  *
- * @param object $model 
- * @param array $request 
+ * @param object $model
+ * @param array $request
  * @return array $request
  * @author Dean Sofer
  */
@@ -426,7 +431,7 @@ class ApisSource extends DataSource {
 		if ($scan) {
 			$model->request['uri']['path'] = $scan[0];
 		} else {
-			return false;				
+			return false;
 		}
 		return $this->request($model);
 	}
@@ -451,7 +456,7 @@ class ApisSource extends DataSource {
 			if ($scan) {
 				$model->request['uri']['path'] = $scan[0];
 			} else {
-				return false;				
+				return false;
 			}
 		}
 		return $this->request($model);

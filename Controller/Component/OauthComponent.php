@@ -50,17 +50,17 @@ class OauthComponent extends Component {
 			'method' => 'OAuth'
 		),
 	);
-	
+
 	protected $_config = array();
 	protected $_map = array();
-	
+
 	/**
 	 * Default datasource config. Only used if a string is passed
 	 *
 	 * @var string
 	 */
 	public $useDbConfig = null;
-	
+
 	var $controller;
 
 	/**
@@ -73,12 +73,12 @@ class OauthComponent extends Component {
 	 */
 	public function initialize($controller) {
 		$this->controller = $controller;
-		
+
 		$settings = (array)$this->settings;
 		if (count($settings) === 1) {
 			$this->useDbConfig = $settings[0];
 		}
-		
+
 		foreach ($settings as $key => $setting) {
 			if (is_int($key)) {
 				$key = $setting;
@@ -114,7 +114,7 @@ class OauthComponent extends Component {
 			App::uses('ConnectionManager', 'Model');
 			$ds = ConnectionManager::getDataSource($name);
 			$this->_config[$name] = $ds->config;
-			
+
 			if ($this->Session->check('OAuth.'.$name.'.access_token')) {
 				$ds->config['access_token'] = $this->Session->read('OAuth.'.$name.'.access_token');
 			} else {
@@ -142,7 +142,7 @@ class OauthComponent extends Component {
 
 	/**
 	 * Returns true if OAuth credentials are in the session
-	 * 
+	 *
 	 * @param string $dbConfig
 	 * @return boolean
 	 */
@@ -152,11 +152,11 @@ class OauthComponent extends Component {
 		}
 		return $this->Session->check('OAuth.'.$dbConfig.'.access_token') || ($this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret'));
 	}
-	
+
 	/**
 	 * Returns a configuration map from the specific datasource plugin
 	 *
-	 * @param string $config 
+	 * @param string $config
 	 * @return array $this->_map
 	 * @author Dean Sofer
 	 */
@@ -217,7 +217,7 @@ class OauthComponent extends Component {
 	/**
 	 * The second stage of the OAuth Dance. Redirects the user to
 	 * the API website so they can authorize your application.
-	 * 
+	 *
 	 * @param string $oAuthRequestToken
 	 * @return void
 	 */
@@ -226,10 +226,10 @@ class OauthComponent extends Component {
 		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $this->_map['hosts']['oauth'] . '/' . $this->_map['oauth']['authorize'] . '?oauth_token=' . $oAuthRequestToken;
 		$this->controller->redirect($redirect);
 	}
-	
+
 	/**
 	 * Same as above for OAuth v2.0
-	 * 
+	 *
 	 * @param string $oAuthRequestToken
 	 * @return void
 	 */
@@ -245,7 +245,7 @@ class OauthComponent extends Component {
 	/**
 	 * The third stage of the OAuth Dance. Gets OAuth Access Token
 	 * and OAuth Access Token Secret.
-	 * 
+	 *
 	 * @param string $oAuthConsumerKey
 	 * @param string $oAuthConsumerSecret
 	 * @param string $oAuthRequestToken
@@ -283,13 +283,13 @@ class OauthComponent extends Component {
 		return $accessToken;
 
 	}
-	
+
 	/**
 	 * Same as above for OAuth v2.0
 	 *
-	 * @param string $oAuthConsumerKey 
-	 * @param string $oAuthConsumerSecret 
-	 * @param string $oAuthCode 
+	 * @param string $oAuthConsumerKey
+	 * @param string $oAuthConsumerSecret
+	 * @param string $oAuthCode
 	 * @return array Array containing keys token and token_secret
 	 * @author Dean Sofer
 	 */
@@ -326,9 +326,9 @@ class OauthComponent extends Component {
 	 * This is a convenience method that you can call from your controller action
 	 * that you link to from your views to sign in with twitter, if you don't need
 	 * to do anything special that deviates from the default approach.
-	 * 
+	 *
 	 * In your controller action you simply do:
-	 * 
+	 *
 	 *		 public function twitter_connect($redirect = null) {
 	 *			 $this->Oauth->connect(urldecode($redirect));
 	 *		 }
@@ -368,15 +368,15 @@ class OauthComponent extends Component {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Secret'), $redirect);
 		}
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
-		
+
 		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
-			
+
 			$this->authorizeV2($oAuthConsumerKey, $oAuthCallback);
-			
+
 		} else {
-			
+
 			$requestToken = $this->getOAuthRequestToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCallback);
-			
+
 			if ($requestToken) {
 				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token', $requestToken['oauth_token']);
 				$this->Session->write('OAuth.'.$this->useDbConfig.'.oauth_request_token_secret', $requestToken['oauth_token_secret']);
@@ -384,7 +384,7 @@ class OauthComponent extends Component {
 			} else {
 				$this->_error(__d('oauth', 'Could not get OAuth Request Token from '.$this->useDbConfig), $redirect);
 			}
-		}	
+		}
 	}
 
 	/**
@@ -392,13 +392,13 @@ class OauthComponent extends Component {
 	 * that twitter redirects the user back to after they authorized your
 	 * application, if you don't need to do anything special that deviates from
 	 * the default approach.
-	 * 
+	 *
 	 * In your controller action you simply do:
-	 * 
+	 *
 	 *		 public function twitter_callback() {
 	 *			 $this->Oauth->callback();
 	 *		 }
-	 * 
+	 *
 	 * This method exchanges the authorised request token for the OAuth Access
 	 * Token and OAuth Access Token Secret and stores them in the session before
 	 * redirecting the user back to the URL passed in in the redirect parameter to
@@ -407,7 +407,7 @@ class OauthComponent extends Component {
 	 */
 	public function callback($redirect = null) {
 		$this->_getMap();
-		
+
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key'), $redirect);
 		}
@@ -424,11 +424,11 @@ class OauthComponent extends Component {
 				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig), $redirect);
 			}
 			$oAuthCode = $this->controller->params['url']['code'];
-			
+
 			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode);
-			
+
 		} else {
-			
+
 			if (!$this->Session->check('OAuth.'.$this->useDbConfig.'.oauth_request_token')) {
 				$this->_error(__d('oauth', 'Could not get OAuth Request Token from session'), $redirect);
 			}
@@ -445,9 +445,8 @@ class OauthComponent extends Component {
 			$oAuthVerifier = $this->controller->params['url']['oauth_verifier'];
 
 			$accessToken = $this->getOAuthAccessToken($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthRequestToken, $oAuthRequestTokenSecret, $oAuthVerifier);
-			
 		}
-		
+
 		if ($accessToken) {
 			$sessionData = $this->Session->read('OAuth.'.$this->useDbConfig);
 			$sessionData = array_merge($sessionData, $accessToken);
@@ -458,17 +457,17 @@ class OauthComponent extends Component {
 			} else {
 				return $accessToken;
 			}
-			
+
 		} else {
 			$this->_error(__d('oauth', 'Could not get OAuth Access Token from '.$this->useDbConfig), $redirect);
 		}
-		
+
 	}
 
 	/**
 	 * Sets message in session flash and redirects to redirect URL if not empty,
 	 * else just dump the message out on the screen.
-	 * 
+	 *
 	 * @param string $message
 	 * @param string $redirect
 	 */
@@ -480,6 +479,6 @@ class OauthComponent extends Component {
 		}
 
 		die($message);
-		
+
 	}
 }
