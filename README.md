@@ -4,11 +4,9 @@ Since I started going through several restful apis things started to become repe
 
 ## Notes
 
-The ApiDatasource is an **abstract** class and must be extended by the Api Datasource you wish to support. For example, 
-I have [Github](https://github.com/ProLoser/CakePHP-Github/), [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn),
-[JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) and [Flickr](https://github.com/ProLoser/CakePHP-Flickr) 
-datasources, but it's extremely easy to add your own. Open a bug ticket if you find you're having difficulty and would 
-like some help. In addition, I would happily appreciate any documentation improvements that can be contributed!
+ApiDatasource is an **abstract** class and must be extended by the Api you wish to support.
+Open a bug ticket if you'd like some help making your own or just want me to do it.
+It's _very_ easy to add new ones - [check out the list](#expanding-functionality)
 
 ## Installation
 
@@ -92,6 +90,10 @@ Class Project extends AppModel {
 
 __Checkout other plugins for examples__
 
+ * [Flickr](https://github.com/proloser/cakephp-flickr)
+ * [Vimeo](https://github.com/proloser/cakephp-vimeo)
+ * [Instagram](https://github.com/proloser/cakephp-instagram)
+ * [Facebook](https://github.com/JavRok/http_socket_oauth)
  * [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn)
  * [Github](https://github.com/ProLoser/CakePHP-Github) which does OAuth v2
  * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
