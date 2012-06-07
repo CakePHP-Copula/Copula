@@ -88,6 +88,8 @@ Class Project extends AppModel {
 
 ## Expanding functionality
 
+Use the [template branch](https://github.com/ProLoser/CakePHP-Api-Datasources/tree/template) as a starting point for creating your own datasource.
+
 __Checkout other plugins for examples__
 
  * [Flickr](https://github.com/proloser/cakephp-flickr)
