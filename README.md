@@ -4,7 +4,7 @@ Since I started going through several restful apis things started to become repe
 
 ## Notes
 
-ApiDatasource is an **abstract** class and must be extended by the Api you wish to support.
+`ApiDatasource` is an **abstract** class and must be extended by the Api you wish to support.
 Open a bug ticket if you'd like some help making your own or just want me to do it.
 It's _very_ easy to add new ones - [check out the list](#expanding-functionality)
 
