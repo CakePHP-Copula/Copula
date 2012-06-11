@@ -98,7 +98,14 @@ __Checkout other plugins for examples__
  * [Facebook](https://github.com/JavRok/http_socket_oauth)
  * [LinkedIn](https://github.com/ProLoser/CakePHP-LinkedIn)
  * [Github](https://github.com/ProLoser/CakePHP-Github) which does OAuth v2
+ * [PhotoBucket](https://github.com/ProLoser/CakePHP-Photobucket)
+ * [Dribbble](https://github.com/ProLoser/CakePHP-Dribbble)
+ * [Instagram](https://github.com/ProLoser/CakePHP-Instagram)
+ * [Asana](https://github.com/ProLoser/CakePHP-Asana)
+ * [Delicio.us](https://github.com/ProLoser/CakePHP-Delicious)
+ * [Forrst](https://github.com/ProLoser/CakePHP-Forrst)
  * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
+ * A whole lot more
 
 ### Creating a configuration map
 
@@ -114,6 +121,8 @@ $config['Apis']['MyPlugin']['hosts'] = array(
 	'rest' => 'api.myplugin.com/v1',
 );
 $config['Apis']['MyPlugin']['oauth'] = array(
+	'version' => '1.0', // [Optional] Values: '1.0' or '2.0'
+	'scheme' => 'https', // [Optional] Values: 'http' or 'https'
 	'authorize' => 'authorize', // Example URI: api.linkedin.com/uas/oauth/authorize
 	'request' => 'requestToken',
 	'access' => 'accessToken',
