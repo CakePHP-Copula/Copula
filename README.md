@@ -121,7 +121,7 @@ $config['Apis']['MyPlugin']['hosts'] = array(
 	'rest' => 'api.myplugin.com/v1',
 );
 $config['Apis']['MyPlugin']['oauth'] = array(
-	'version' => '1.0', // [Optional] Values: '1.0' or '2.0'
+	'version' => '1.0', // [Optional] OAuth version (defaults to 1.0): '1.0' or '2.0'
 	'scheme' => 'https', // [Optional] Values: 'http' or 'https'
 	'authorize' => 'authorize', // Example URI: api.linkedin.com/uas/oauth/authorize
 	'request' => 'requestToken',
