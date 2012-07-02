@@ -395,12 +395,13 @@ class ApisSource extends DataSource {
 			$model->request = array();
 		}
 		$model->request = array_merge(array('method' => 'GET'), $model->request);
+		if (!isset($queryData['conditions'])) {
+			$queryData['conditions'] = array();
+		}
 		if (empty($model->request['uri']['path']) && !empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
+			$model->request['uri']['query'] = $queryData['conditions'];
 		} elseif (!empty($this->map['read']) && (is_string($queryData['fields']) || !empty($queryData['section']))) {
-			if (!isset($queryData['conditions'])) {
-				$queryData['conditions'] = array();
-			}
 			if (!empty($queryData['section'])) {
 				$section = $queryData['section'];
 			} else {
