@@ -397,11 +397,16 @@ class ApisSource extends DataSource {
 		$model->request = array_merge(array('method' => 'GET'), $model->request);
 		if (empty($model->request['uri']['path']) && !empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
-		} elseif (!empty($this->map['read']) && is_string($queryData['fields'])) {
+		} elseif (!empty($this->map['read']) && (is_string($queryData['fields']) || !empty($queryData['section']))) {
 			if (!isset($queryData['conditions'])) {
 				$queryData['conditions'] = array();
 			}
-			$scan = $this->scanMap($model, 'read', $queryData['fields'], array_keys($queryData['conditions']));
+			if (!empty($queryData['section'])) {
+				$section = $queryData['section'];
+			} else {
+				$section = $queryData['fields'];
+			}
+			$scan = $this->scanMap($model, 'read', $section, array_keys($queryData['conditions']));
 			$model->request['uri']['path'] = $scan[0];
 			$model->request['uri']['query'] = array();
 			$usedConditions = array_intersect(array_keys($queryData['conditions']), array_merge($scan[1], $scan[2]));
