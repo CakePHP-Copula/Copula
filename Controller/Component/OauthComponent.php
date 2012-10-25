@@ -201,6 +201,11 @@ class OauthComponent extends Component {
 				'oauth_callback' => $oAuthCallback,
 			),
 		));
+
+		if (!empty($this->_config[$this->useDbConfig]['scope'])) {
+			$request['uri']['query'] = array('scope' => $this->_config[$this->useDbConfig]['scope']);
+		}
+
 		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
 		$response = $Http->request($request);
