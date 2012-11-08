@@ -71,7 +71,7 @@ class OauthComponent extends Component {
 	 * @return void
 	 * @access public
 	 */
-	public function initialize($controller) {
+	public function initialize(Controller $controller) {
 		$this->controller = $controller;
 
 		$settings = (array)$this->settings;
@@ -97,7 +97,7 @@ class OauthComponent extends Component {
 	 *
 	 * @return void
 	 */
-	public function startup() {
+	public function startup(Controller $controller) {
 		foreach ($this->_config as $name => $options) {
 			$isAuthorized = false;
 			if ($this->accessTokenConfig($name)) {

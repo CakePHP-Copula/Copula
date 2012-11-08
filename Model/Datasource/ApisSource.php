@@ -102,7 +102,7 @@ class ApisSource extends DataSource {
 		parent::__construct($config);
 	}
 
-	public function describe() {
+	public function describe($model) {
 		return array();
 	}
 
@@ -147,7 +147,7 @@ class ApisSource extends DataSource {
 		}
 
 		if (method_exists($this, 'beforeRequest')) {
-			$request = $this->beforeRequest(&$model, $request);
+			$request = $this->beforeRequest($model, $request);
 		}
 
 		$model->request = $request;
@@ -376,7 +376,7 @@ class ApisSource extends DataSource {
  * @return array $request
  * @author Dean Sofer
  */
-	public function beforeRequest(&$model, $request) {
+	public function beforeRequest($model, $request) {
 		return $request;
 	}
 
@@ -390,7 +390,7 @@ class ApisSource extends DataSource {
  * @return mixed
  * @access public
  */
-	public function read(&$model, $queryData = array()) {
+	public function read(Model $model, $queryData = array(), $recursive = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -425,7 +425,7 @@ class ApisSource extends DataSource {
  * @param array $fields Unused
  * @param array $values Unused
  */
-	public function create(&$model, $fields = null, $values = null) {
+	public function create(Model $model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -449,7 +449,7 @@ class ApisSource extends DataSource {
  * @param array $fields Unused
  * @param array $values Unused
  */
-	public function update(&$model, $fields = null, $values = null) {
+	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -474,7 +474,7 @@ class ApisSource extends DataSource {
  * @param AppModel $model
  * @param mixed $id Unused
  */
-	public function delete(&$model, $id = null) {
+	public function delete(Model $model, $id = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
