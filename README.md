@@ -104,6 +104,7 @@ __Checkout other plugins for examples__
  * [Asana](https://github.com/ProLoser/CakePHP-Asana)
  * [Delicio.us](https://github.com/ProLoser/CakePHP-Delicious)
  * [Forrst](https://github.com/ProLoser/CakePHP-Forrst)
+ * [CloudPrint (Google)](https://github.com/tenebrousedge/CakePHP-Cloudprint)
  * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
  * A whole lot more
 
