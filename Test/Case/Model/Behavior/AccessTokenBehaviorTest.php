@@ -5,9 +5,9 @@ App::uses('AccessTokenBehavior', 'Apis.Model/Behavior');
 App::uses('HttpSocket', 'Network/Http');
 App::uses('HttpResponse', 'Network/Http');
 
-class TokenTestModel extends CakeTestModel {
+class AccesstokenTestModel extends CakeTestModel {
 
-	public $name = "Token";
+	public $name = "Accesstoken";
 	public $useTable = false;
 	public $useDbConfig = "Cloudprint";
 	public $actsAs = array('Apis.AccessToken');
@@ -16,35 +16,35 @@ class TokenTestModel extends CakeTestModel {
 
 /**
  * Tests functionality of AccessToken behavior
- * @property Token $Token
+ * @property Accesstoken $Accesstoken
  */
 class AccessTokenBehaviorTestCase extends CakeTestCase {
 
-	var $fixtures = array('plugin.cloudprint.token');
+	var $fixtures = array('plugin.apis.token');
 
 	function setUp() {
 		parent::setUp();
-		$this->Token = new TokenTestModel();
+		CakePlugin::load('Cloudprint');
+		$this->Accesstoken = new AccesstokenTestModel();
 	}
 
 	function tearDown() {
-		unset($this->Token);
+		unset($this->Accesstoken);
 		parent::tearDown();
 	}
 
 	function testSetup() {
-		$this->assertTrue(isset($this->Token->Behaviors->AccessToken->config['Token']));
-		$this->assertTrue(is_object($this->Token->Socket));
+		$this->assertTrue(isset($this->Accesstoken->Behaviors->AccessToken->config['Accesstoken']));
+		$this->assertTrue(is_object($this->Accesstoken->Socket));
 	}
 
 	function testGetCredentials() {
-		$Behavior = new AccessTokenBehavior();
-		$results = $Behavior->getCredentials($this->Token);
+		$results = $this->Accesstoken->getCredentials();
 		$this->assertTrue(!empty($results['key']) && !empty($results['secret']));
 	}
 
 	function testGetRemoteToken() {
-		unset($this->Token->Socket);
+		unset($this->Accesstoken->Socket);
 		$response = new HttpResponse();
 		$response->body = json_encode(array(
 			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
@@ -52,11 +52,11 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 				));
 		$response->code = '200';
 		$this->getMock('HttpSocket', array('request'), array(), 'MockHttpSocket');
-		$this->Token->Socket = new MockHttpSocket();
-		$this->Token->Socket->expects($this->once())
+		$this->Accesstoken->Socket = new MockHttpSocket();
+		$this->Accesstoken->Socket->expects($this->once())
 				->method('request')
 				->will($this->returnValue($response));
-		$result = $this->Token->getRemoteToken('code', 'authorization_code');
+		$result = $this->Accesstoken->getRemoteToken('code', 'authorization_code');
 		$expected = array(
 			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 			'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk'
@@ -67,44 +67,41 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 	function testIsExpired() {
 		$newer['modified'] = date('Y-m-d H:i:s', strtotime('-5 min'));
 		$older['modified'] = '2012-11-07 23:10:18';
-		$this->assertTrue($this->Token->isExpired($older));
-		$this->assertFalse($this->Token->isExpired($newer));
+		$this->assertTrue($this->Accesstoken->isExpired($older));
+		$this->assertFalse($this->Accesstoken->isExpired($newer));
 	}
 
 	function testGetRefreshAccess() {
-		$this->getMock('AccessTokenBehavior', array('getAccessToken'), array(), 'MockAccess');
+		$this->getMock('AccessTokenBehavior', array('getRemoteToken'), array(), 'MockAccess');
 		$this->Access = new MockAccess();
 		$token = array(
 			'access_token' => 'test1',
 			'refresh_token' => 'replace'
 		);
 		$this->Access->expects($this->once())
-				->method('getAccessToken')
+				->method('getRemoteToken')
 				->will($this->returnValue($token));
-		$this->getMock('TokenTestModel', array('field', 'saveField'), array(), 'MockModel');
+		$this->getMock('AccesstokenTestModel', array('field', 'saveField'), array(), 'MockModel');
 		$this->Model = new MockModel();
 		$this->Model->expects($this->once())->method('saveField');
 		$this->Model->expects($this->once())
 				->method('field')
 				->will($this->returnValue('test3'));
-		$results = $this->Access->getRefreshAccess($this->Model, array('access_token' => 'replace', 'refresh_token' => 'replace', 'id' => '1'));
-		$expected = array(
-			'access_token' => 'test1',
-			'refresh_token' => 'replace',
-			'modified' => 'test3',
-			'id' => '1'
-		);
-		$this->assertEquals('1', $this->Model->id);
-		$this->assertEquals($expected, $results);
+		$this->Access->setup($this->Model);
+		$test = array('access_token' => 'replace', 'refresh_token' => 'replace', 'user_id' => '42', 'id' => '4');
+		$results = $this->Access->getRefreshAccess($this->Model, $test);
+		$this->assertEquals('test1', $results['access_token']);
+		$this->assertEquals('replace', $results['refresh_token']);
+		$this->assertTrue(!empty($results['modified']));
+		$this->assertTrue(!empty($results['id']));
+		$this->assertEquals('Cloudprint', $results['api']);
 	}
 
-	function testAfterFind() {
-		$token = $this->Token->find('all', array(
-			'conditions' => array('user_id' => '1'),
-			'callbacks' => 'before'
-				));
-		$this->getMock('AccessTokenBehavior', array('isExpired', 'getRefreshAccess'), array(), 'MockAccess');
-		$this->Access = new MockAccess();
+	function testGetToken() {
+		$Token = ClassRegistry::init('Apis.Token');
+		$token = $Token->getTokenDb('1', 'Cloudprint');
+		$this->Access = $this->getMock('AccessTokenBehavior', array('isExpired', 'getRefreshAccess'));
+		$this->Access->setup($this->Accesstoken);
 		$this->Access->expects($this->any())
 				->method('isExpired')
 				->will($this->onConsecutiveCalls(false, true));
@@ -115,9 +112,10 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 		$this->Access->expects($this->once())
 				->method('getRefreshAccess')
 				->will($this->returnValue($expected));
-		$results = $this->Access->afterFind($this->Token, $token, true);
-		$this->assertEquals($results[0]['Token']['access_token'], $expected['access_token']);
-		$this->assertEquals($results[0]['Token']['refresh_token'], $expected['refresh_token']);
+		$results = $this->Access->getToken($this->Accesstoken, $token['user_id']);
+		$this->assertEquals($expected['access_token'], $results['access_token']);
+		$this->assertEquals($expected['refresh_token'], $results['refresh_token']);
+		$moar = $this->Access->getToken($this->Accesstoken, $token['user_id']);
 	}
 
 }

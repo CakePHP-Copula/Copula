@@ -36,7 +36,7 @@ class TokenTestCase extends CakeTestCase {
 	}
 
 	function testSaveTokenDb() {
-		$return = $this->Token->saveTokenDb('12', $this->results[0]['Token'], 'Cloudprint');
+		$return = $this->Token->saveTokenDb($this->results[0]['Token'], 'Cloudprint', '12');
 		$this->assertTrue(!empty($return['Token']));
 	}
 
