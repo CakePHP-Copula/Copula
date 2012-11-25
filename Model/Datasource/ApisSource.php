@@ -25,8 +25,6 @@ class ApisSource extends DataSource {
 	 * @var array
 	 */
 	public $config = array();
-	// TODO: Relocate to a dedicated schema file
-	public $_schema = array();
 
 	/**
 	 * Instance of CakePHP core HttpSocket class
@@ -57,7 +55,10 @@ class ApisSource extends DataSource {
 	 * @var array
 	 */
 	public $map = array();
+	
+	protected $_sources = null;
 
+	protected $_baseConfig = array();
 	/**
 	 * API options
 	 * @var array
