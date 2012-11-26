@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Apis DataSource
  *
@@ -6,73 +7,74 @@
  *
  * @package default
  * @author Dean Sofer
- **/
+ * */
 App::uses('DataSource', 'Model/Datasource');
+
 class ApisSource extends DataSource {
 
-/**
- * The description of this data source
- *
- * @var string
- */
+	/**
+	 * The description of this data source
+	 *
+	 * @var string
+	 */
 	public $description = 'Apis DataSource';
 
-/**
- * Holds the datasource configuration
- *
- * @var array
- */
+	/**
+	 * Holds the datasource configuration
+	 *
+	 * @var array
+	 */
 	public $config = array();
 
-	// TODO: Relocate to a dedicated schema file
-	public $_schema = array();
-
-/**
- * Instance of CakePHP core HttpSocket class
- *
- * @var HttpSocket
- */
+	/**
+	 * Instance of CakePHP core HttpSocket class
+	 *
+	 * @var HttpSocket
+	 */
 	public $Http = null;
 
-/**
- * Request Logs
- *
- * @var array
- * @access private
- */
+	/**
+	 * Request Logs
+	 *
+	 * @var array
+	 * @access private
+	 */
 	private $__requestLog = array();
 
-/**
- * Request Log limit per entry in bytes
- *
- * @var integer
- * @access protected
- */
+	/**
+	 * Request Log limit per entry in bytes
+	 *
+	 * @var integer
+	 * @access protected
+	 */
 	protected $_logLimitBytes = 5000;
 
-/**
- * Holds a configuration map
- *
- * @var array
- */
+	/**
+	 * Holds a configuration map
+	 *
+	 * @var array
+	 */
 	public $map = array();
+	
+	protected $_sources = null;
 
-/**
- * API options
- * @var array
- */
+	protected $_baseConfig = array();
+	/**
+	 * API options
+	 * @var array
+	 */
 	public $options = array(
-		'format'    => 'json',
-		'ps'		=> '&', // param separator
-		'kvs'		=> '=', // key-value separator
+		'format' => 'json',
+		'ps' => '&', // param separator
+		'kvs' => '=', // key-value separator
 	);
 
-/**
- * Loads HttpSocket class
- *
- * @param array $config
- * @param HttpSocket $Http
- */
+	/**
+	 * Loads HttpSocket class
+	 *
+	 * @param array $config
+	 * @param HttpSocket $Http
+	 */
 	public function __construct($config, $Http = null) {
 		if (!isset($this->config['database']))
 			$this->config['database'] = '';
@@ -106,16 +108,16 @@ class ApisSource extends DataSource {
 		return array();
 	}
 
-/**
- * Sends HttpSocket requests. Builds your uri and formats the response too.
- *
- * @param string $params
- * @param array $options
- *		method: get, post, delete, put
- *		data: either in string form: "option1=foo&option2=bar" or as a keyed array: array('option1' => 'foo', 'option2' => 'bar')
- * @return array $response
- * @author Dean Sofer
- */
+	/**
+	 * Sends HttpSocket requests. Builds your uri and formats the response too.
+	 *
+	 * @param string $params
+	 * @param array $options
+	 * 		method: get, post, delete, put
+	 * 		data: either in string form: "option1=foo&option2=bar" or as a keyed array: array('option1' => 'foo', 'option2' => 'bar')
+	 * @return array $response
+	 * @author Dean Sofer
+	 */
 	public function request(&$model) {
 		if (is_object($model)) {
 			$request = $model->request;
@@ -154,25 +156,25 @@ class ApisSource extends DataSource {
 
 		$timerStart = microtime(true);
 
-	    // Issues request
-	    $response = $this->Http->request($request);
+		// Issues request
+		$response = $this->Http->request($request);
 
 		$timerEnd = microtime(true);
 
 		// Log the request in the query log
-		if(Configure::read('debug')) {
+		if (Configure::read('debug')) {
 			$logText = '';
-			foreach(array('request','response') as $logPart) {
+			foreach (array('request', 'response') as $logPart) {
 				$logTextForThisPart = $this->Http->{$logPart}['raw'];
-				if($logPart == 'response') {
+				if ($logPart == 'response') {
 					$logTextForThisPart = $logTextForThisPart['response'];
 				}
-				if(strlen($logTextForThisPart) > $this->_logLimitBytes) {
-					$logTextForThisPart = substr($logTextForThisPart, 0, $this->_logLimitBytes).' [ ... truncated ...]';
+				if (strlen($logTextForThisPart) > $this->_logLimitBytes) {
+					$logTextForThisPart = substr($logTextForThisPart, 0, $this->_logLimitBytes) . ' [ ... truncated ...]';
 				}
-				$logText .= '---'.strtoupper($logPart)."---\n".$logTextForThisPart."\n\n";
+				$logText .= '---' . strtoupper($logPart) . "---\n" . $logTextForThisPart . "\n\n";
 			}
-			$took = round(($timerEnd - $timerStart)/1000);
+			$took = round(($timerEnd - $timerStart) / 1000);
 			$newLog = array(
 				'query' => $logText,
 				'error' => '',
@@ -286,9 +288,9 @@ class ApisSource extends DataSource {
 		return $response;
 	}
 
-	/*public function listSources() {
-		return array_keys($this->_schema);
-	}*/
+	/* public function listSources() {
+	  return array_keys($this->_schema);
+	  } */
 
 	/**
 	 * Iterates through the tokens (passed or request items) and replaces them into the url
@@ -301,20 +303,20 @@ class ApisSource extends DataSource {
 	public function swapTokens(&$model, $url, $tokens = array()) {
 		$formattedTokens = array();
 		foreach ($tokens as $token => $value) {
-			$formattedTokens[':'.$token] = $value;
+			$formattedTokens[':' . $token] = $value;
 		}
 		$url = strtr($url, $formattedTokens);
 		return $url;
 	}
 
-/**
- * Generates a conditions section of the url
- *
- * @param array $params permitted conditions
- * @param array $queryData passed conditions in key => value form
- * @return string
- * @author Dean Sofer
- */
+	/**
+	 * Generates a conditions section of the url
+	 *
+	 * @param array $params permitted conditions
+	 * @param array $queryData passed conditions in key => value form
+	 * @return string
+	 * @author Dean Sofer
+	 */
 	public function buildQuery($params = array(), $data = array()) {
 		$query = array();
 		foreach ($params as $param) {
@@ -327,16 +329,16 @@ class ApisSource extends DataSource {
 		return implode($this->options['ps'], $query);
 	}
 
-/**
- * Tries iterating through the config map of REST commmands to decide which command to use
- *
- * @param object $model
- * @param string $action
- * @param string $section
- * @param array $fields
- * @return boolean $found
- * @author Dean Sofer
- */
+	/**
+	 * Tries iterating through the config map of REST commmands to decide which command to use
+	 *
+	 * @param object $model
+	 * @param string $action
+	 * @param string $section
+	 * @param array $fields
+	 * @return boolean $found
+	 * @author Dean Sofer
+	 */
 	public function scanMap(&$model, $action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
 			throw new Exception('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
@@ -352,44 +354,42 @@ class ApisSource extends DataSource {
 		throw new Exception('[ApiSource] Could not find a match for passed conditions');
 	}
 
-/**
- * Play nice with the DebugKit
- *
- * @param boolean sorted ignored
- * @param boolean clear will clear the log if set to true (default)
- * @return array of log requested
- */
-	public function getLog($sorted = false, $clear = true){
+	/**
+	 * Play nice with the DebugKit
+	 *
+	 * @param boolean sorted ignored
+	 * @param boolean clear will clear the log if set to true (default)
+	 * @return array of log requested
+	 */
+	public function getLog($sorted = false, $clear = true) {
 		$log = $this->__requestLog;
-		if($clear){
+		if ($clear) {
 			$this->__requestLog = array();
 		}
 		return array('log' => $log, 'count' => count($log), 'time' => 'Unknown');
 	}
 
-
-/**
- * Just-In-Time callback for any last-minute request modifications
- *
- * @param object $model
- * @param array $request
- * @return array $request
- * @author Dean Sofer
- */
+	/**
+	 * Just-In-Time callback for any last-minute request modifications
+	 *
+	 * @param object $model
+	 * @param array $request
+	 * @return array $request
+	 * @author Dean Sofer
+	 */
 	public function beforeRequest($model, $request) {
 		return $request;
 	}
 
-
-/**
- * Uses standard find conditions. Use find('all', $params). Since you cannot pull specific fields,
- * we will instead use 'fields' to specify what table to pull from.
- *
- * @param string $model The model being read.
- * @param string $queryData An array of query data used to find the data you want
- * @return mixed
- * @access public
- */
+	/**
+	 * Uses standard find conditions. Use find('all', $params). Since you cannot pull specific fields,
+	 * we will instead use 'fields' to specify what table to pull from.
+	 *
+	 * @param string $model The model being read.
+	 * @param string $queryData An array of query data used to find the data you want
+	 * @return mixed
+	 * @access public
+	 */
 	public function read(Model $model, $queryData = array(), $recursive = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
@@ -418,13 +418,13 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-/**
- * Sets method = POST in request if not already set
- *
- * @param AppModel $model
- * @param array $fields Unused
- * @param array $values Unused
- */
+	/**
+	 * Sets method = POST in request if not already set
+	 *
+	 * @param AppModel $model
+	 * @param array $fields Unused
+	 * @param array $values Unused
+	 */
 	public function create(Model $model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
@@ -442,13 +442,13 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-/**
- * Sets method = PUT in request if not already set
- *
- * @param AppModel $model
- * @param array $fields Unused
- * @param array $values Unused
- */
+	/**
+	 * Sets method = PUT in request if not already set
+	 *
+	 * @param AppModel $model
+	 * @param array $fields Unused
+	 * @param array $values Unused
+	 */
 	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
@@ -468,12 +468,12 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-/**
- * Sets method = DELETE in request if not already set
- *
- * @param AppModel $model
- * @param mixed $id Unused
- */
+	/**
+	 * Sets method = DELETE in request if not already set
+	 *
+	 * @param AppModel $model
+	 * @param mixed $id Unused
+	 */
 	public function delete(Model $model, $id = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
@@ -483,10 +483,11 @@ class ApisSource extends DataSource {
 	}
 
 	public function calculate($model, $func, $params = array()) {
-
+		
 	}
 
 	public function getColumnType() {
 		return true;
 	}
+
 }
