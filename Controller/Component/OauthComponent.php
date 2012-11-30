@@ -61,7 +61,8 @@ class OauthComponent extends Component {
 	 */
 	public $useDbConfig = null;
 
-	var $controller;
+	public $controller;
+
 
 	/**
 	 * Called before Controller::beforeFilter(), stores reference to Controller
@@ -244,6 +245,12 @@ class OauthComponent extends Component {
 		if (!empty($this->_config[$this->useDbConfig]['scope'])) {
 			$redirect .= '&scope=' . $this->_config[$this->useDbConfig]['scope'];
 		}
+		if($this->useDbConfig == 'salesforce') {
+		    $redirect .= '&display=popup';
+		}
+		if (!empty($this->_config[$this->useDbConfig]['response_type'])) {
+			$redirect .= '&response_type=' . $this->_config[$this->useDbConfig]['response_type'];
+		}
 		$this->controller->redirect($redirect);
 	}
 
@@ -298,7 +305,7 @@ class OauthComponent extends Component {
 	 * @return array Array containing keys token and token_secret
 	 * @author Dean Sofer
 	 */
-	public function getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode) {
+	public function getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode, $redirectUri) {
 		$this->_getMap();
 		$request = Set::merge($this->_oAuthRequestDefaults, array(
 			'uri' => array(
@@ -307,8 +314,10 @@ class OauthComponent extends Component {
 			),
 			'method' => 'POST',
 			'body' => array(
+			    'grant_type' => 'authorization_code',
 				'client_id' => $oAuthConsumerKey,
 				'client_secret' => $oAuthConsumerSecret,
+			    'redirect_uri' => $redirectUri,
 				'code' => $oAuthCode,
 			)
 		));
@@ -321,10 +330,59 @@ class OauthComponent extends Component {
 		if ($Http->response['status']['code'] != 200) {
 			return false;
 		}
-
+        if (is_string($response)) {
 		parse_str($response, $accessToken);
 
 		return $accessToken;
+	}
+
+		return $response['body'];
+	}
+	/**
+	 * Refresh the OAuth v2.0 Access Token
+	 *
+	 * @param string $oAuthConsumerKey
+	 * @param string $oAuthConsumerSecret
+	 * @param string $refreshToken
+	 * @return array Array containing keys token and token_secret
+	 * @author Dean Sofer
+	 */
+	public function refreshOAuthAccessToken($refreshToken = null) {
+
+	    if ($refreshToken == null) {
+	        $oauthToken = ClassRegistry::init('OauthToken')->find('first', array('conditions' => array('user_id' => AuthComponent::user('id'),'type' => $this->useDbConfig)));
+            $refreshToken = $oauthToken['OauthToken']['refresh_token'];
+	    }
+	    $this->_getMap();
+	    $request = Set::merge($this->_oAuthRequestDefaults, array(
+	            'uri' => array(
+	                    'host' => $this->_map['hosts']['oauth'],
+	                    'path' => $this->_map['oauth']['refresh'],
+	            ),
+	            'method' => 'POST',
+	            'body' => array(
+	                    'grant_type' => 'refresh_token',
+	                    'client_id' => $this->_config[$this->useDbConfig]['login'],
+	                    'client_secret' => $this->_config[$this->useDbConfig]['password'],
+	                    'refresh_token' => $refreshToken,
+	            )
+	    ));
+	    App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+	    $Http = new HttpSocketOauth();
+	    $response = $Http->request($request);
+	    if ($Http->response['status']['code'] != 200) {
+	        return false;
+	    }
+	    if (is_string($response['body'])) {
+	        $accessToken = json_decode($response['body'],true);
+	        $oauthToken['OauthToken']['access_token'] = $accessToken['access_token'];
+	        ClassRegistry::init('OauthToken')->save($oauthToken);
+            $this->Session->write('OAuth.salesforce.access_token',$accessToken['access_token']);
+	        //$this->controller->redirect($this->controller->request->here);
+	        //return $accessToken;
+	    }
+
+	    //return $response['body'];
 	}
 
 	/**
@@ -410,7 +468,7 @@ class OauthComponent extends Component {
 	 * the connect action above, or if that is not set, the details are dumped
 	 * out.
 	 */
-	public function callback($redirect = null) {
+	public function callback($redirect = null,$redirectUri = null) {
 		$this->_getMap();
 
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
@@ -424,13 +482,11 @@ class OauthComponent extends Component {
 		$oAuthConsumerSecret = $this->_config[$this->useDbConfig]['password'];
 
 		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
-
-			if (empty($this->controller->params['url']['code'])) {
+			if (empty($this->controller->request->query['code'])) {
 				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig), $redirect);
 			}
-			$oAuthCode = $this->controller->params['url']['code'];
-
-			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode);
+			$oAuthCode = $this->controller->request->query['code'];
+			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode, $redirectUri);
 
 		} else {
 
@@ -454,7 +510,7 @@ class OauthComponent extends Component {
 
 		if ($accessToken) {
 			$sessionData = $this->Session->read('OAuth.'.$this->useDbConfig);
-			$sessionData = array_merge($sessionData, $accessToken);
+			$sessionData = array_merge($sessionData, json_decode($accessToken,true));
 			$this->Session->write('OAuth.'.$this->useDbConfig, $sessionData);
 
 			if ($redirect) {

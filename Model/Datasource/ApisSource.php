@@ -116,7 +116,7 @@ class ApisSource extends DataSource {
  * @return array $response
  * @author Dean Sofer
  */
-	public function request(&$model) {
+	public function request(Model $model) {
 		if (is_object($model)) {
 			$request = $model->request;
 		} elseif (is_array($model)) {
@@ -191,8 +191,14 @@ class ApisSource extends DataSource {
 
 		// Check response status code for success or failure
 		if (substr($this->Http->response['status']['code'], 0, 1) != 2) {
+		    //Invalid Session so try to refresh the accessToken
+		    $error = json_decode($this->Http->response,true);
+		    if ($error[0]['errorCode'] == 'INVALID_SESSION_ID') {
+		        $accessToken = $this->refreshAccessToken($model);
+
+		    }
 			if (is_object($model) && method_exists($model, 'onError')) {
-				$model->onError();
+				$model->onError('INVALID_SESSION_ID');
 			}
 			return false;
 		}
@@ -241,6 +247,42 @@ class ApisSource extends DataSource {
 		}
 		return $request;
 	}
+	/**
+	 * Supplements a request array with oauth credentials
+	 *
+	 * @param object $model
+	 * @param array $request
+	 * @return array $request
+	 */
+	public function refreshAccessToken(Model $model) {
+       $oauthToken = ClassRegistry::init('OauthToken')->find('first', array('conditions' => array('user_id' => AuthComponent::user('id'),'type' => 'salesforce')));
+       //debug($oauthToken);
+           $request = array(
+	            'uri' => array(
+	                    'host' => $oauthToken['OauthToken']['instance_url'] . '/services/oauth2',
+	                    'path' => 'token',
+	                    'query' => array(
+	                        'grant_type' => 'refresh_token',
+	                        'client_id' => $this->config['login'],
+	                        'client_secret' => $this->config['password'],
+	                        'refresh_token' => $oauthToken['OauthToken']['refresh_token'],
+	                    )
+	            ),
+	            'scheme' => 'https',
+	            'method' => 'POST',
+	            );
+       App::uses('HttpSocket', 'Network/Http');
+       $Http = new HttpSocket();
+       $this->Http = $Http;
+        print_r($request);
+	    $json = $this->Http->request($request);
+	    $response = json_decode($json);
+	    //debug($response);
+	    if (isset($response->access_token)) {
+	    return $response->access_token;
+	    } else {
+	        return $response->error_description;
+	    }
 
 	/**
 	 * Decodes the response based on the content type
@@ -251,8 +293,11 @@ class ApisSource extends DataSource {
 	 */
 	public function decode($response) {
 		// Get content type header
+		if (!isset($this->Http->response['header']['Content-Type'])) {
+		    $contentType = 'application/json';
+		}else {
 		$contentType = $this->Http->response['header']['Content-Type'];
-
+		}
 		// Extract content type from content type header
 		if (preg_match('/^([a-z0-9\/\+]+);\s*charset=([a-z0-9\-]+)/i', $contentType, $matches)) {
 			$contentType = $matches[1];
