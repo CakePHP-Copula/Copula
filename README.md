@@ -106,6 +106,7 @@ __Checkout other plugins for examples__
  * [Forrst](https://github.com/ProLoser/CakePHP-Forrst)
  * [CloudPrint (Google)](https://github.com/tenebrousedge/CakePHP-Cloudprint)
  * [JsFiddle](https://github.com/ProLoser/CakePHP-JsFiddle) for the bare minimum needed to add a new API
+ * [Freebase](https://github.com/imsamurai/cakephp-freebasesource-datasource) (modified implementation)
  * A whole lot more
 
 ### Creating a configuration map
