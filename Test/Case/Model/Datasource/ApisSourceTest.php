@@ -4,6 +4,7 @@ App::uses('ApisSource', 'Apis.Model/Datasource');
 App::uses('AppModel', 'Model');
 App::uses('PhpReader', 'Configure');
 App::uses('HttpSocketResponse', 'Network/Http');
+App::uses('OauthCredentials', 'Apis.Lib');
 
 class ApisTestModel extends AppModel {
 
@@ -91,15 +92,11 @@ class ApisSourceTest extends CakeTestCase {
 
 	public function setUp() {
 		parent::setUp();
-		Configure::write('Apis.Apis.path', $this->paths);
-		Configure::write('Apis.Apis.oauth', $this->config);
+		Configure::write('Apis.testapi.path', $this->paths);
+		Configure::write('Apis.testapi.oauth', $this->config);
+		OauthCredentials::reset();
 		$this->Apis = ConnectionManager::create('testapi', $this->dbconf);
 		$this->model = ClassRegistry::init('ApisTestModel');
-	}
-
-	function testConstruct() {
-		$this->assertFalse(empty($this->Apis->oauth));
-		$this->assertFalse(empty($this->Apis->map));
 	}
 
 	function testDescribe() {
@@ -255,6 +252,7 @@ class ApisSourceTest extends CakeTestCase {
 	}
 
 	public function tearDown() {
+		OauthCredentials::reset();
 		ConnectionManager::drop('testapi');
 		unset($this->model, $this->Apis);
 		ClassRegistry::flush();

@@ -11,6 +11,7 @@
 App::uses('DataSource', 'Model/Datasource');
 App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 App::uses('HttpSocket', 'Network/Http');
+App::uses('OauthCredentials', 'Apis.Lib');
 
 class ApisSource extends DataSource {
 
@@ -73,23 +74,22 @@ class ApisSource extends DataSource {
 	 *
 	 * @param array $config
 	 */
-	public function __construct($config) {
+	/*public function __construct($config) {
 		// Store the API configuration map
 		list($plugin, $name) = pluginSplit($config['datasource'], true);
 		$name = str_replace('Source', '', $name);
-		$this->oauth = Configure::read('Apis.' . $name . '.oauth');
 		$this->map = $this->_getPaths($name, $plugin);
 		parent::__construct($config);
-	}
+	}*/
 
 	/**
 	 * This function returns the REST paths for the datasource. Could be extended to use database or XML.
 	 * @param string $plugin
 	 * @return array
 	 */
-	protected function _getPaths($name, $plugin = null) {
+	/*protected function _getPaths($name, $plugin = null) {
 		return Configure::read('Apis.' . $name . '.path');
-	}
+	}*/
 
 	/**
 	 * 
@@ -131,12 +131,16 @@ class ApisSource extends DataSource {
 		return $query;
 	}
 
-	protected function _buildRequest($type = 'read') {
+	protected function _buildRequest($apiName, $type = 'read') {
+		$this->map = Configure::read("Apis.$apiName.path");
 		$request = array();
 		$request['method'] = $this->restMap[$type];
 		$request['uri']['host'] = $this->map['host'];
-		$request['auth'] = $this->_getAuth($this->config['authMethod']);
-		$request['uri']['scheme'] = (!empty($this->oauth['scheme'])) ? $this->oauth['scheme'] : null;
+		$request['auth'] = $this->_getAuth($this->config['authMethod'], $apiName);
+		$scheme = Configure::read("Apis.$apiName.oauth.scheme");
+		if (!empty($scheme)) {
+			$request['uri']['scheme'] = $scheme;
+		}
 		return $request;
 	}
 
@@ -185,12 +189,13 @@ class ApisSource extends DataSource {
 
 		return $model->response;
 	}
-/**
- * 
- * @param type $query
- * @param \HttpSocketResponse $response
- * @return void
- */
+
+	/**
+	 * 
+	 * @param type $query
+	 * @param \HttpSocketResponse $response
+	 * @return void
+	 */
 	public function logQuery(Model $model, \HttpSocketResponse$response) {
 		if (Configure::read('debug')) {
 			$logItems = array($model->request['raw'], $response->raw);
@@ -207,12 +212,14 @@ class ApisSource extends DataSource {
 			$this->_requestLog[] = $newLog;
 		}
 	}
-/**
- * 
- * @param type $method
- * @return array
- */
-	protected function _getAuth($method) {
+
+	/**
+	 * 
+	 * @param type $method
+	 * @return array
+	 */
+	protected function _getAuth($method, $apiName) {
+		$token = OauthCredentials::getAccessToken($apiName);
 		switch ($method) {
 			case 'Basic':
 
@@ -228,8 +235,8 @@ class ApisSource extends DataSource {
 					'oauth_consumer_key' => $this->config['login'],
 					'oauth_consumer_secret' => $this->config['password']
 						,);
-				$auth['oauth_token'] = (isset($this->config['oauth_token'])) ? $this->config['oauth_token'] : null;
-				$auth['oauth_token_secret'] = (isset($this->config['oauth_token_secret'])) ? $this->config['oauth_token_secret'] : null;
+				$auth['oauth_token'] = (!empty($token['access_token'])) ? $token['access_token'] : null;
+				$auth['oauth_token_secret'] = (!empty($token['token_secret'])) ? $token['token_secret'] : null;
 				break;
 			case 'OAuthV2':
 				$auth = array(
@@ -238,7 +245,7 @@ class ApisSource extends DataSource {
 					'client_id' => $this->config['login'],
 					'client_secret' => $this->config['password']
 				);
-				$auth['access_token'] = (isset($this->config['access_token'])) ? $this->config['access_token'] : null;
+				$auth['access_token'] = (isset($token['access_token'])) ? $token['access_token'] : null;
 				break;
 			default:
 				$auth = null;
@@ -362,7 +369,7 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
-		$model->request = $this->_buildRequest('read');
+		$model->request = $this->_buildRequest($model->useDbConfig, 'read');
 		if (!empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
 		} else {
@@ -382,7 +389,7 @@ class ApisSource extends DataSource {
 	 * @param array $values Unused
 	 */
 	public function create(Model $model, $fields = null, $values = null) {
-		$model->request = $this->_buildRequest('create');
+		$model->request = $this->_buildRequest($model->useDbConfig,'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
 		if ($scan) {
 			$model->request['uri']['path'] = $scan[0];
@@ -401,7 +408,7 @@ class ApisSource extends DataSource {
 	 * @param array $values Unused
 	 */
 	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
-		$model->request = $this->_buildRequest('update');
+		$model->request = $this->_buildRequest($model->useDbConfig, 'update');
 		if (!empty($this->map['update']) && in_array('section', $fields)) {
 			$scan = $this->_scanMap('write', $fields['section'], $fields);
 			if ($scan) {
@@ -421,7 +428,7 @@ class ApisSource extends DataSource {
 	 * @param mixed $id Unused
 	 */
 	public function delete(Model $model, $id = null) {
-		$this->_buildRequest('delete');
+		$this->_buildRequest($model->useDbConfig,'delete');
 		return $this->request($model);
 	}
 
