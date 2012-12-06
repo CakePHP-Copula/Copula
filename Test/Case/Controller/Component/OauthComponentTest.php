@@ -11,7 +11,9 @@ App::uses('OauthComponent', 'Apis.Controller/Component');
 
 class TestController extends Controller {
 
-	var $components = array('Auth');
+	var $components = array('Auth' => array(
+			'authorize' => array('Apis' => array('testapi' => array('store' => 'Db')))
+			));
 	var $autoRender = false;
 
 	function redirect($url) {
@@ -34,14 +36,16 @@ class TestController extends Controller {
  */
 class OauthComponentTest extends CakeTestCase {
 
+	var $fixtures = array('plugin.apis.token');
+
 	function setUp() {
 		parent::setUp();
 		$Request = new CakeRequest();
 		$Response = new CakeResponse();
 		$collection = new ComponentCollection();
-		$settings = array('Apis' => array('testapi' => array('store' => 'Db')));
 		$this->controller = new TestController($Request, $Response);
-		$this->Oauth = new OauthComponent($collection, $settings);
+		$this->controller->constructClasses();
+		$this->Oauth = new OauthComponent($collection);
 		OauthCredentials::reset();
 		ConnectionManager::create('testapi', array(
 			'datasource' => 'Apis.ApisSource',
@@ -53,6 +57,7 @@ class OauthComponentTest extends CakeTestCase {
 			'version' => '2.0',
 			'authorize' => 'auth',
 			'access' => 'token',
+			'request' => 'request',
 			'host' => 'accounts.example.com/oauth2',
 			'scope' => 'https://www.example.com/auth/',
 			'callback' => 'https://localhost.local/oauth2callback');
@@ -90,7 +95,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = 'This is a test response body. What did you expect?';
+		$response->body = json_encode('This is a test response body. What did you expect?');
 		$authVars = array(
 			'oauth_consumer_key' => 'key',
 			'oauth_consumer_secret' => 'secret',
@@ -111,7 +116,7 @@ class OauthComponentTest extends CakeTestCase {
 				->method('request')
 				->will($this->returnValueMap(array(array($request, $response))));
 		$result = $this->Oauth->getAccessToken('testapi', $authVars);
-		$this->assertEquals($response->body, $result);
+		$this->assertEquals('This is a test response body. What did you expect?', $result);
 	}
 
 	function testGetAccessTokenV2() {
@@ -119,7 +124,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = 'This is a test response body. What did you expect?';
+		$response->body = json_encode('This is a test response body. What did you expect?');
 		$request = array(
 			'method' => 'POST',
 			'uri' => array(
@@ -138,22 +143,22 @@ class OauthComponentTest extends CakeTestCase {
 				->will($this->returnValueMap(array(array($request, $response))));
 		$token = 'I am a banana!';
 		$result = $this->Oauth->getAccessTokenV2('testapi', $token);
-		$this->assertEquals($response->body, $result);
+		$this->assertEquals('This is a test response body. What did you expect?', $result);
 	}
 
-	function testGetOauthRequestToken(){
+	function testGetOauthRequestToken() {
 		unset($this->Oauth->Http);
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = 'This is a test response body. What did you expect?';
+		$response->body = json_encode('This is a test response body. What did you expect?');
 		$request = array(
 			'method' => 'GET',
 			'uri' => array(
 				'host' => 'accounts.example.com/oauth2',
 				'path' => 'request',
 				'scheme' => 'https',
-				'query' =>'scope=https%3A%2F%2Fwww.example.com%2Fauth%2F'
+				'query' => 'scope=https%3A%2F%2Fwww.example.com%2Fauth%2F'
 			),
 			'auth' => array(
 				'oauth_consumer_key' => 'login',
@@ -167,9 +172,113 @@ class OauthComponentTest extends CakeTestCase {
 		Configure::write('Apis.testapi.oauth.request', 'request');
 		Configure::write('Apis.testapi.oauth.version', '1.0');
 		$result = $this->Oauth->getOauthRequestToken('testapi');
-		$this->assertEquals($response->body, $result);
+		$this->assertEquals('This is a test response body. What did you expect?', $result);
 	}
-	
+
+	function testConnectV2() {
+		Configure::write('Apis.testapi.oauth.version', '2.0');
+		$this->Oauth->connect('testapi');
+		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F";
+		$this->assertEquals($expected, $this->controller->redirect);
+	}
+
+	function testConnectV1() {
+		Configure::write('Apis.testapi.oauth.version', '1.0');
+		unset($this->Oauth->Http);
+		$this->Oauth->Http = $this->getMock('HttpSocket', array('request'));
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('oauth_token' => 'token', 'oauth_token_secret' => 'tokenSecret'));
+		$request = array(
+			'method' => 'GET',
+			'uri' => array(
+				'host' => 'accounts.example.com/oauth2',
+				'path' => 'request',
+				'scheme' => 'https',
+				'query' => 'scope=https%3A%2F%2Fwww.example.com%2Fauth%2F'
+			),
+			'auth' => array(
+				'oauth_consumer_key' => 'login',
+				'oauth_consumer_secret' => 'password',
+				'oauth_callback' => "https://localhost.local/oauth2callback"
+			)
+		);
+		$this->Oauth->Http->expects($this->any())
+				->method('request')
+				->will($this->returnValueMap(array(array($request, $response))));
+		$this->Oauth->connect('testapi');
+		$expected = "https://accounts.example.com/oauth2/auth?oauth_token=token";
+		$this->assertEquals($expected, $this->controller->redirect);
+	}
+
+	function testCallbackV2() {
+		$this->controller->request->addParams(array('url' => array('code' => 'tanstaafl')));
+		unset($this->Oauth->Http);
+		$this->Oauth->Http = $this->getMock('HttpSocket');
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('access_token' => 'token', 'refresh_token' => 'refresh', 'expires' => '3600', 'type' => 'bearer'));
+		$request = array(
+			'method' => 'POST',
+			'uri' => array(
+				'host' => 'accounts.example.com/oauth2',
+				'path' => 'token',
+				'scheme' => 'https'
+			),
+			'body' => array(
+				'client_id' => 'login',
+				'client_secret' => 'password',
+				'code' => 'tanstaafl'
+			)
+		);
+		$this->Oauth->Http->expects($this->any())
+				->method('request')
+				->will($this->returnValueMap(array(array($request, $response))));
+		$this->Oauth->userId = '1';
+		$this->Oauth->callback('testapi');
+		$this->assertEquals(array('token'), OauthCredentials::getAccessToken('testapi'));
+	}
+
+	function testCallbackV1() {
+		Configure::write('Apis.testapi.oauth.version', '1.0');
+		$this->controller->request->addParams(array('url' => array('oauth_verifier' => 'tanstaafl')));
+		unset($this->Oauth->Http);
+		$this->Oauth->Http = $this->getMock('HttpSocket');
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('oauth_token' => 'token', 'oauth_token_secret' => 'secret'));
+		$request = array(
+			'method' => 'GET',
+			'uri' => array(
+				'host' => 'accounts.example.com/oauth2',
+				'path' => 'token',
+				'scheme' => 'https'
+			),
+			'auth' => array(
+				'oauth_consumer_key' => 'login',
+				'oauth_consumer_secret' => 'password',
+				'oauth_verifier' => 'tanstaafl',
+				'oauth_request_token' => 'token',
+				'oauth_request_token_secret' => 'secret'
+			)
+		);
+		$this->Oauth->Http->expects($this->any())
+				->method('request')
+				->will($this->returnValueMap(array(array($request, $response))));
+		$this->Oauth->userId = '1';
+		$this->Oauth->Session = $this->getMock('SessionComponent', array('read', 'check'), array($this->controller->Components));
+		$requestToken = array( 'oauth_request_token' => 'token',
+		'oauth_request_token_secret' => 'secret');
+		$this->Oauth->Session->expects($this->once())
+				->method('read')
+				->will($this->returnValue($requestToken));
+		$this->Oauth->Session->expects($this->once())
+				->method('check')
+				->will($this->returnValue(true));
+		$token = $this->Oauth->callback('testapi');
+		$this->assertEquals(array_values($token), array_values(OauthCredentials::getAccessToken('testapi')));
+	}
+
 }
 
 ?>

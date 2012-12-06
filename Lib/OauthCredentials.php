@@ -31,7 +31,7 @@ class OauthCredentials {
 		if(!empty(self::$Apis[$apiName]) && !empty(self::$Apis[$apiName]['access_token'])){
 			$token = self::$Apis[$apiName]['access_token'];
 			$tokenSecret = (isset(self::$Apis[$apiName]['token_secret']))? self::$Apis[$apiName]['token_secret'] : null;
-			return array($token, $tokenSecret);
+			return array_filter(array($token, $tokenSecret));
 		}
 		return array();
 	}
