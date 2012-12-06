@@ -295,10 +295,11 @@ class OauthComponent extends Component {
 	 * @param string $oAuthConsumerKey
 	 * @param string $oAuthConsumerSecret
 	 * @param string $oAuthCode
+	 * @param string $oAuthCallBack
 	 * @return array Array containing keys token and token_secret
-	 * @author Dean Sofer
+	 * @author Dean Sofer, adrelanex
 	 */
-	public function getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode) {
+	public function getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode, $oAuthCallBack) {
 		$this->_getMap();
 		$request = Set::merge($this->_oAuthRequestDefaults, array(
 			'uri' => array(
@@ -307,23 +308,26 @@ class OauthComponent extends Component {
 			),
 			'method' => 'POST',
 			'body' => array(
+				'grant_type' => 'authorization_code',
+				'code' => $oAuthCode,
+				'redirect_uri' => $oAuthCallBack,
 				'client_id' => $oAuthConsumerKey,
 				'client_secret' => $oAuthConsumerSecret,
-				'code' => $oAuthCode,
 			)
 		));
 
-		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
-		$Http = new HttpSocketOauth();
+		$Http = new HttpSocket(); 
 
 		$response = $Http->request($request);
 
 		if ($Http->response['status']['code'] != 200) {
 			return false;
 		}
-
-		parse_str($response, $accessToken);
-
+		
+		if($Http->response['Content-Type']='application/json')
+			$accessToken = (array) json_decode($response);
+		else
+			parse_str($response, $accessToken);
 		return $accessToken;
 	}
 
@@ -410,9 +414,9 @@ class OauthComponent extends Component {
 	 * the connect action above, or if that is not set, the details are dumped
 	 * out.
 	 */
-	public function callback($redirect = null) {
+	public function callback($redirect = null, $oAuthCallback = null) {
 		$this->_getMap();
-
+		
 		if (!isset($this->_config[$this->useDbConfig]['login'])) {
 			$this->_error(__d('oauth', 'Could not get OAuth Consumer Key'), $redirect);
 		}
@@ -425,12 +429,18 @@ class OauthComponent extends Component {
 
 		if (isset($this->_map['oauth']['version']) && $this->_map['oauth']['version'] == '2.0') {
 
+			if (!$oAuthCallback) {
+				$oAuthCallback = Router::url(array('action' => $this->useDbConfig.'_callback'), true);
+			} elseif (is_array($oAuthCallback)) {
+				$oAuthCallback = Router::url($oAuthCallback, true);
+			}
+			
 			if (empty($this->controller->params['url']['code'])) {
 				$this->_error(__d('oauth', 'Could not get OAuth Access Code from ' . $this->useDbConfig), $redirect);
 			}
 			$oAuthCode = $this->controller->params['url']['code'];
 
-			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode);
+			$accessToken = $this->getOAuthAccessTokenV2($oAuthConsumerKey, $oAuthConsumerSecret, $oAuthCode, $oAuthCallback);
 
 		} else {
 
