@@ -1,75 +1,78 @@
 <?php
+
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
 App::uses('Token', 'Apis.Model');
-
+App::uses('OauthCredentials', 'Apis.Lib');
 /**
  * @property Token $Token
  */
 class OauthAuthorize extends BaseAuthorize {
 
+	public $Token;
+
 	public function __construct(\ComponentCollection $collection, $settings = array()) {
 		$this->Token = ClassRegistry::init('Apis.Token');
-		$defaults = array('Apis' => array(), 'store' => '');
+		$defaults = array('Apis' => array());
 		$settings = array_merge($defaults, $settings);
 		parent::__construct($collection, $settings);
 	}
 
 	public function authorize($user, \CakeRequest $request) {
-		$controller = $this->controller();
-		$dbs = $this->getDbConfigs($controller);
-		if(empty($dbs)){
-			// no attached models
-			return false;
+		$dbs = ConnectionManager::sourceList();
+		$apiNames = array_intersect(array_keys($this->settings['Apis']), array_values($dbs));
+		$count = 0;
+		foreach ($apiNames as $index => $name) {
+			switch ($this->settings['Apis'][$name]['store']) {
+				case 'Session':
+					$allowed = $this->_checkTokenSession($name, $user['id']);
+					break;
+				case 'Cookie':
+					$allowed = $this->_checkTokenCookie($name, $user['id']);
+					break;
+				default:
+					$allowed = $this->_checkTokenDb($name, $user['id']);
+					break;
+			}
+			if ($allowed) {
+				$count++;
+			}
 		}
-		$apiNames = array_intersect($this->settings['Apis'], $dbs);
-		if ($this->settings['store'] == 'Session') {
-			// @todo implement session retrieval
-			return false;
-		} else {
-			$count = 0;
-			foreach ($apiNames as $index => $apiName) {
-				$token = $this->Token->getTokenDb($user['id'], $apiName);
-				if (!empty($token['access_token'])) {
-					$this->setAccessToken(strtolower($apiName), $token['access_token']);
-					$count++;
-				} else {
-					return false;
-				}
-			}
-			if($count === count($this->settings['Apis'])){
-				return true;
-			}
+		if ($count == count($apiNames)) {
+			return true;
 		}
 		return false;
 	}
 
-	/**
-	 * 
-	 * @param type $datasource
-	 * @param type $token token to use for this db.
-	 * @return void
-	 */
-	public function setAccessToken($datasource, $token) {
-		$ds = ConnectionManager::getDataSource($datasource);
-		$ds->config['access_token'] = $token;
+	protected function _checkTokenDb($apiName, $userId) {
+		$token = $this->Token->getTokenDb($userId, $apiName);
+		if (!empty($token['access_token'])) {
+			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
+			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
+			return true;
+		} else {
+			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
+			return false;
+		}
 	}
 
-	/**
-	 * 
-	 * @param \Controller $controller
-	 */
-	public function getDbConfigs(\Controller $controller) {
-		$dbs = array();
-		if ($controller->uses === true) {
-			$className = $controller->modelClass;
-			$dbs[] = $controller->{$className}->useDbConfig;
-		} elseif (is_array($controller->uses)) {
-			foreach ($controller->uses as $modelName) {
-				list($plugin, $class) = pluginSplit($modelName);
-				$dbs[] = $controller->{$class}->useDbConfig;
-			}
+	protected function _checkTokenSession($apiName, $userId) {
+		App::uses('CakeSession', 'Model/Datasource');
+		$token = CakeSession::read('Oauth.' . $apiName);
+		if (!empty($token['access_token'])) {
+			// check for token validity?
+			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
+			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
+			return true;
+		} else {
+			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
+			return false;
 		}
-		return $dbs;
+	}
+
+	protected function _checkTokenCookie($apiName, $userId) {
+		//not implemented
+		//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
+		return false;
 	}
 
 }

@@ -1,7 +1,7 @@
 <?php
 
 App::uses('HttpSocket', 'Network/Http');
-
+App::uses('OauthCredentials', 'Apis.Lib');
 /**
  * Description of AccessToken
  *
@@ -12,45 +12,43 @@ class AccessTokenBehavior extends ModelBehavior {
 
 	public $config = array();
 
-/**
- * 
- * @param \Model $Model
- * @param type $config
- * @throws CakeException
- * @return void
- */
+	/**
+	 * 
+	 * @param \Model $Model
+	 * @param type $config
+	 * @throws CakeException
+	 * @return void
+	 */
 	public function setup(\Model $Model, $config = array()) {
 		if (!isset($this->config[$Model->alias])) {
 			$this->config[$Model->alias] = array(
 				'expires' => '3600',
 				'Api' => $Model->useDbConfig,
-				'useSesson' => false
+				'useSession' => false
 			);
 		}
 		$this->config[$Model->alias] = array_merge(
-				$this->config[$Model->alias], (array)$config);
-		Configure::load($this->config[$Model->alias]['Api'] . '.' . $this->config[$Model->alias]['Api'] . "Source");
-		$oauth = Configure::read('Apis.' . $this->config[$Model->alias]['Api']);
+				$this->config[$Model->alias], (array) $config);
+		$oauth = Configure::read('Apis.' . $this->config[$Model->alias]['Api'] . '.oauth');
 		if (!empty($oauth)) {
-			$path = $oauth['oauth']['scheme'] . '//' . $oauth['hosts']['oauth'] . '/' . $oauth['oauth']['access'];
+			$path = $oauth['scheme'] . '//' . $oauth['host'] . '/' . $oauth['access'];
 			$Model->Socket = new HttpSocket($path);
 		} else {
 			throw new CakeException('API not configured.');
 		}
 	}
 
-/**
- * Used to get Oauth Tokens for the configured API.
- * @param \Model $model
- * @param string $oAuthCode
- * @param string $grantType
- * @return array array containing access token values
- * @throws CakeException
- */
+	/**
+	 * Used to get Oauth Tokens for the configured API.
+	 * @param \Model $model
+	 * @param string $oAuthCode
+	 * @param string $grantType
+	 * @return array array containing access token values
+	 * @throws CakeException
+	 */
 	public function getRemoteToken(\Model $model, $oAuthCode, $grantType) {
-		Configure::load($this->config[$model->alias]['Api'] . '.' . $this->config[$model->alias]['Api'] . "Source");
-		$credentials = $this->getCredentials($model, $this->config[$model->alias]['Api']);
-		$config = Configure::read('Apis.' . $this->config[$model->alias]['Api']);
+		$credentials = $this->_getCredentials($model, $this->config[$model->alias]['Api']);
+		$config = Configure::read('Apis.' . $this->config[$model->alias]['Api'] . '.oauth');
 		$request = array(
 			'method' => 'POST');
 		$body = array(
@@ -78,15 +76,12 @@ class AccessTokenBehavior extends ModelBehavior {
 		}
 	}
 
-/**
- * Returns oauth credentials for the API
- * @param \Model $model
- * @return array containing oauth credentials for the datasource
- */
-	public function getCredentials(\Model $model) {
-		$ds = ConnectionManager::getDataSource(strtolower($this->config[$model->alias]['Api']));
-		$credentials = array('key' => $ds->config['login'], 'secret' => $ds->config['password']);
-		return $credentials;
+	/**
+	 * Returns oauth credentials for the API
+	 * @return array containing oauth credentials for the datasource
+	 */
+	protected function _getCredentials(\Model $model) {
+		return OauthCredentials::getCredentials(strtolower($this->config[$model->alias]['Api']));
 	}
 
 	/**
@@ -99,7 +94,6 @@ class AccessTokenBehavior extends ModelBehavior {
 		$refresh = $this->getRemoteToken($model, $access_token['refresh_token'], 'refresh_token');
 		if ($refresh) {
 			$access_token = array_merge($access_token, $refresh);
-			// I do this twice. I'm not sure if it's a good idea either time. Alternative would be to create an instance in setup.
 			$Token = ClassRegistry::init('Apis.Token');
 			$Token->id = $access_token['id'];
 			$token = $Token->saveTokenDb($access_token, $this->config[$model->alias]['Api']);

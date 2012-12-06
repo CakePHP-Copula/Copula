@@ -53,14 +53,25 @@ class Token extends ApisAppModel {
 	 * @param array $access_token
 	 * @param string $apiName
 	 */
-	function saveTokenDb(array $access_token, $apiName, $user = null) {
-		$user_id = (!empty($user))? $user: $access_token['user_id'];
-		$data = array('Token' => array(
+	function saveTokenDb(array $access_token, $apiName, $user_id = null) {
+		if (!$user_id && !empty($access_token['user_id'])) {
+			$user_id = $access_token['user_id'];
+		}
+		if (!empty($access_token['oauth_token'])) {
+			$data = array('Token' => array(
+				'access_token' => $access_token['oauth_token'],
+				'token_secret' => $access_token['oauth_token_secret'],
 				'user_id' => $user_id,
+				'api' => $apiName
+			));
+		} else {
+			$data = array('Token' => array(
+					'user_id' => $user_id,
 				'access_token' => $access_token['access_token'],
 				'refresh_token' => $access_token['refresh_token'],
-				'api' => $apiName
-				));
+					'api' => $apiName
+					));
+		}
 		return $this->save($data);
 	}
 

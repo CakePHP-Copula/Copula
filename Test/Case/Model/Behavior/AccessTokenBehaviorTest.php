@@ -4,12 +4,13 @@ App::uses('Token', 'Apis.Model');
 App::uses('AccessTokenBehavior', 'Apis.Model/Behavior');
 App::uses('HttpSocket', 'Network/Http');
 App::uses('HttpResponse', 'Network/Http');
+App::uses('OauthCredentials', 'Apis.Lib');
 
 class AccesstokenTestModel extends CakeTestModel {
 
 	public $name = "Accesstoken";
 	public $useTable = false;
-	public $useDbConfig = "Cloudprint";
+	public $useDbConfig = "testapi";
 	public $actsAs = array('Apis.AccessToken');
 
 }
@@ -24,11 +25,27 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 
 	function setUp() {
 		parent::setUp();
-		CakePlugin::load('Cloudprint');
+		$config = array(
+			'scheme' => 'https',
+			'host' => 'accounts.example.com',
+			'access' => 'token',
+			'scope' => 'www.example.com',
+			'callback' => 'localhost/oauth2callback'
+		);
+		Configure::write('Apis.testapi.oauth', $config);
+		OauthCredentials::reset();
+		ConnectionManager::create('testapi', array(
+			'datasource' => 'Apis.ApisSource',
+			'login' => 'login',
+			'password' => 'password',
+			'authMethod' => 'OAuthV2'
+		));
 		$this->Accesstoken = new AccesstokenTestModel();
 	}
 
 	function tearDown() {
+		ConnectionManager::drop('testapi');
+		OauthCredentials::reset();
 		unset($this->Accesstoken);
 		parent::tearDown();
 	}
@@ -36,11 +53,6 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 	function testSetup() {
 		$this->assertTrue(isset($this->Accesstoken->Behaviors->AccessToken->config['Accesstoken']));
 		$this->assertTrue(is_object($this->Accesstoken->Socket));
-	}
-
-	function testGetCredentials() {
-		$results = $this->Accesstoken->getCredentials();
-		$this->assertTrue(!empty($results['key']) && !empty($results['secret']));
 	}
 
 	function testGetRemoteToken() {
@@ -94,12 +106,12 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 		$this->assertEquals('replace', $results['refresh_token']);
 		$this->assertTrue(!empty($results['modified']));
 		$this->assertTrue(!empty($results['id']));
-		$this->assertEquals('Cloudprint', $results['api']);
+		$this->assertEquals('testapi', $results['api']);
 	}
 
 	function testGetToken() {
 		$Token = ClassRegistry::init('Apis.Token');
-		$token = $Token->getTokenDb('1', 'Cloudprint');
+		$token = $Token->getTokenDb('1', 'testapi');
 		$this->Access = $this->getMock('AccessTokenBehavior', array('isExpired', 'getRefreshAccess'));
 		$this->Access->setup($this->Accesstoken);
 		$this->Access->expects($this->any())
