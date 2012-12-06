@@ -15,7 +15,7 @@ class TokenTestCase extends CakeTestCase {
 	var $results = array(array(
 			'Token' => array(
 				'id' => '4',
-				'api' => 'Cloudprint',
+				'api' => 'testapi',
 				'user_id' => '1',
 				'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 				'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
@@ -28,15 +28,15 @@ class TokenTestCase extends CakeTestCase {
 	}
 
 	function testGetTokenDb() {
-		$token = $this->Token->getTokenDb('1', 'Cloudprint');
+		$token = $this->Token->getTokenDb('1', 'testapi');
 		$this->assertTrue(!empty($token['access_token']));
 
-		$noToken = $this->Token->getTokenDb('4', 'Cloudprint');
+		$noToken = $this->Token->getTokenDb('4', 'testapi');
 		$this->assertTrue(empty($noToken));
 	}
 
 	function testSaveTokenDb() {
-		$return = $this->Token->saveTokenDb($this->results[0]['Token'], 'Cloudprint', '12');
+		$return = $this->Token->saveTokenDb($this->results[0]['Token'], 'testapi', '12');
 		$this->assertTrue(!empty($return['Token']));
 	}
 

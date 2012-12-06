@@ -34,7 +34,7 @@ class TokenFixture extends CakeTestFixture {
 			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 			'modified' => '2012-11-07 23:10:18',
 			'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
-			'api' => 'Cloudprint'
+			'api' => 'testapi'
 		),
 		array(
 			'id' => '3',
@@ -42,7 +42,7 @@ class TokenFixture extends CakeTestFixture {
 			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 			'modified' => '2012-11-07 23:10:18',
 			'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
-			'api' => 'Cloudprint'
+			'api' => 'testapi'
 		)
 	);
 
