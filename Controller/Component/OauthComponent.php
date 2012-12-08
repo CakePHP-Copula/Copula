@@ -126,11 +126,10 @@ class OauthComponent extends Component {
 		}
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
-		if ($response->isOk()) {
-			return json_decode($response->body(), true);
-		} else {
+		if (!$response->isOk()) {
 			return false;
 		}
+                return json_decode($response->body(), true);
 	}
 
 	/**
