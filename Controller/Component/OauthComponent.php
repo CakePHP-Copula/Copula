@@ -148,7 +148,9 @@ class OauthComponent extends Component {
 			if ($token) {
 				$this->Session->write("Oauth.$apiName.request_token", $token);
 				$this->authorize($apiName, $token['oauth_token']);
-			}
+			} else {
+                                throw new CakeException(__('No Request Token is present for the %s API.', $apiName));
+                        }
 		}
 	}
 
