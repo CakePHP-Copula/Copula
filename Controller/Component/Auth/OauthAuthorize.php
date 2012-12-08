@@ -42,9 +42,8 @@ class OauthAuthorize extends BaseAuthorize {
 		}
 		return false;
 	}
-
-	protected function _checkTokenDb($apiName, $userId) {
-		$token = $this->Token->getTokenDb($userId, $apiName);
+        
+        private function _setToken($apiName, $token) {
 		if (!empty($token['access_token'])) {
 			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
 			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
@@ -52,21 +51,18 @@ class OauthAuthorize extends BaseAuthorize {
 		} else {
 			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
 			return false;
-		}
+		}  
+        }
+        
+	protected function _checkTokenDb($apiName, $userId) {
+		$token = $this->Token->getTokenDb($userId, $apiName);
+                return $this->_setToken($apiName, $token);
 	}
 
 	protected function _checkTokenSession($apiName, $userId) {
 		App::uses('CakeSession', 'Model/Datasource');
 		$token = CakeSession::read('Oauth.' . $apiName);
-		if (!empty($token['access_token'])) {
-			// check for token validity?
-			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
-			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
-			return true;
-		} else {
-			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
-			return false;
-		}
+		return $this->_setToken($apiName, $token);
 	}
 
 	protected function _checkTokenCookie($apiName, $userId) {
