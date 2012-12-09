@@ -126,6 +126,7 @@ class OauthComponent extends Component {
 		if (!empty($scope)) {
 			$request['uri']['query'] = $this->_buildQuery(array('scope' => $scope));
 		}
+                unset($request['auth']['method']);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
