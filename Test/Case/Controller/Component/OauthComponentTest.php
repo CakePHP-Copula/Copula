@@ -95,7 +95,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode('This is a test response body. What did you expect?');
+		$response->body = http_build_query(array('var1' => 'val1', 'var2' => 'val2'));
 		$authVars = array(
 			'oauth_consumer_key' => 'key',
 			'oauth_consumer_secret' => 'secret',
@@ -116,7 +116,7 @@ class OauthComponentTest extends CakeTestCase {
 				->method('request')
 				->will($this->returnValueMap(array(array($request, $response))));
 		$result = $this->Oauth->getAccessToken('testapi', $authVars);
-		$this->assertEquals('This is a test response body. What did you expect?', $result);
+                $this->assertInternalType('array', $result);
 	}
 
 	function testGetAccessTokenV2() {
@@ -124,7 +124,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode('This is a test response body. What did you expect?');
+		$response->body = http_build_query(array('var1' => 'val1', 'var2' => 'val2'));
 		$request = array(
 			'method' => 'POST',
 			'uri' => array(
@@ -143,7 +143,7 @@ class OauthComponentTest extends CakeTestCase {
 				->will($this->returnValueMap(array(array($request, $response))));
 		$token = 'I am a banana!';
 		$result = $this->Oauth->getAccessTokenV2('testapi', $token);
-		$this->assertEquals('This is a test response body. What did you expect?', $result);
+		$this->assertInternalType('array', $result);
 	}
 
 	function testGetOauthRequestToken() {
@@ -151,7 +151,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode('This is a test response body. What did you expect?');
+		$response->body = http_build_query(array('var1' => 'val1', 'var2' => 'val2'));
 		$request = array(
 			'method' => 'GET',
 			'uri' => array(
@@ -161,6 +161,7 @@ class OauthComponentTest extends CakeTestCase {
 				'query' => 'scope=https%3A%2F%2Fwww.example.com%2Fauth%2F'
 			),
 			'auth' => array(
+                                'method' => 'OAuth',
 				'oauth_consumer_key' => 'login',
 				'oauth_consumer_secret' => 'password',
 				'oauth_callback' => "https://localhost.local/oauth2callback"
@@ -172,7 +173,7 @@ class OauthComponentTest extends CakeTestCase {
 		Configure::write('Apis.testapi.oauth.request', 'request');
 		Configure::write('Apis.testapi.oauth.version', '1.0');
 		$result = $this->Oauth->getOauthRequestToken('testapi');
-		$this->assertEquals('This is a test response body. What did you expect?', $result);
+		$this->assertInternalType('array', $result);
 	}
 
 	function testConnectV2() {
@@ -188,7 +189,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket', array('request'));
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode(array('oauth_token' => 'token', 'oauth_token_secret' => 'tokenSecret'));
+		$response->body = http_build_query(array('oauth_token' => 'token', 'oauth_token_secret' => 'tokenSecret'));
 		$request = array(
 			'method' => 'GET',
 			'uri' => array(
@@ -198,7 +199,8 @@ class OauthComponentTest extends CakeTestCase {
 				'query' => 'scope=https%3A%2F%2Fwww.example.com%2Fauth%2F'
 			),
 			'auth' => array(
-				'oauth_consumer_key' => 'login',
+				'method' => 'OAuth',
+                                'oauth_consumer_key' => 'login',
 				'oauth_consumer_secret' => 'password',
 				'oauth_callback' => "https://localhost.local/oauth2callback"
 			)
@@ -217,7 +219,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode(array('access_token' => 'token', 'refresh_token' => 'refresh', 'expires' => '3600', 'type' => 'bearer'));
+		$response->body = http_build_query(array('access_token' => 'token', 'refresh_token' => 'refresh', 'expires' => '3600', 'type' => 'bearer'));
 		$request = array(
 			'method' => 'POST',
 			'uri' => array(
@@ -246,7 +248,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode(array('oauth_token' => 'token', 'oauth_token_secret' => 'secret'));
+		$response->body = http_build_query(array('oauth_token' => 'token', 'oauth_token_secret' => 'secret'));
 		$request = array(
 			'method' => 'GET',
 			'uri' => array(
@@ -255,7 +257,7 @@ class OauthComponentTest extends CakeTestCase {
 				'scheme' => 'https'
 			),
 			'auth' => array(
-				'oauth_consumer_key' => 'login',
+                                'oauth_consumer_key' => 'login',
 				'oauth_consumer_secret' => 'password',
 				'oauth_verifier' => 'tanstaafl',
 				'oauth_request_token' => 'token',
