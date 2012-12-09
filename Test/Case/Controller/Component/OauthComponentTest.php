@@ -97,6 +97,9 @@ class OauthComponentTest extends CakeTestCase {
 		$response->code = 200;
 		$response->body = http_build_query(array('var1' => 'val1', 'var2' => 'val2'));
 		$authVars = array(
+                        'method' => 'OAuthV2',
+                        'client_id' => 'login',
+                        'client_secret' => 'password',
 			'oauth_consumer_key' => 'key',
 			'oauth_consumer_secret' => 'secret',
 			'oauth_verifier' => 'verifier',
@@ -257,6 +260,7 @@ class OauthComponentTest extends CakeTestCase {
 				'scheme' => 'https'
 			),
 			'auth' => array(
+                                'method' => 'OAuth',
                                 'oauth_consumer_key' => 'login',
 				'oauth_consumer_secret' => 'password',
 				'oauth_verifier' => 'tanstaafl',

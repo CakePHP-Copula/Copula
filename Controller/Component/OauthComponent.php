@@ -79,7 +79,7 @@ class OauthComponent extends Component {
 	 */
 	public function getAccessToken($apiName, array $authVars, $requestOptions = array()) {
 		$request = $this->_getRequest($apiName, 'access');
-		$request['auth'] = $authVars;
+		$request['auth'] = array_merge($request['auth'], $authVars);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
