@@ -1,5 +1,7 @@
 <?php
 
+App::uses('ConnectionManager', 'Model');
+
 class OauthCredentials {
 
 	public static $initialized = false;
