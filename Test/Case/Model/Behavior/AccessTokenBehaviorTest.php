@@ -4,7 +4,7 @@ App::uses('Token', 'Apis.Model');
 App::uses('AccessTokenBehavior', 'Apis.Model/Behavior');
 App::uses('HttpSocket', 'Network/Http');
 App::uses('HttpResponse', 'Network/Http');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('OauthConfig', 'Apis.Lib');
 
 class AccesstokenTestModel extends CakeTestModel {
 
@@ -33,7 +33,6 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 			'callback' => 'localhost/oauth2callback'
 		);
 		Configure::write('Apis.testapi.oauth', $config);
-		OauthCredentials::reset();
 		ConnectionManager::create('testapi', array(
 			'datasource' => 'Apis.ApisSource',
 			'login' => 'login',
@@ -45,7 +44,6 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 
 	function tearDown() {
 		ConnectionManager::drop('testapi');
-		OauthCredentials::reset();
 		unset($this->Accesstoken);
 		parent::tearDown();
 	}
@@ -111,7 +109,7 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 
 	function testGetToken() {
 		$Token = ClassRegistry::init('Apis.Token');
-		$token = $Token->getTokenDb('1', 'testapi');
+		$token = $Token->getToken('1', 'testapi');
 		$this->Access = $this->getMock('AccessTokenBehavior', array('isExpired', 'getRefreshAccess'));
 		$this->Access->setup($this->Accesstoken);
 		$this->Access->expects($this->any())

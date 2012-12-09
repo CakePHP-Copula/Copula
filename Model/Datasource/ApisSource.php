@@ -11,7 +11,7 @@
 App::uses('DataSource', 'Model/Datasource');
 App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 App::uses('HttpSocket', 'Network/Http');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('OauthConfig', 'Apis.Lib');
 
 class ApisSource extends DataSource {
 
@@ -55,7 +55,6 @@ class ApisSource extends DataSource {
 	protected $_baseConfig = array(
 		'format' => 'json',
 		'escape' => 'false',
-		'datasource' => '',
 		'authMethod' => 'Basic'
 	);
 
@@ -219,7 +218,7 @@ class ApisSource extends DataSource {
 	 * @return array
 	 */
 	protected function _getAuth($method, $apiName) {
-		$token = OauthCredentials::getAccessToken($apiName);
+		$token = OauthConfig::getAccessToken($apiName);
 		switch ($method) {
 			case 'Basic':
 

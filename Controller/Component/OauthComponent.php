@@ -2,20 +2,22 @@
 
 App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 App::uses('Token', 'Apis.Model');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('OauthConfig', 'Apis.Lib');
 
 /**
  * @property HttpSocketOauth $Http
- * @property Token $Token
+ * @property SessionComponent $Session
  * @property Controller $controller
  */
 class OauthComponent extends Component {
 
 	public $components = array('Session');
 	public $controller;
-	public $userId;
 
 	function __construct(\ComponentCollection $collection, $settings = array()) {
+		if (empty($settings['Apis'])) {
+			$settings['Apis'] = array();
+		}
 		$this->Http = new HttpSocketOauth();
 		parent::__construct($collection, $settings);
 	}
@@ -25,15 +27,17 @@ class OauthComponent extends Component {
 		$this->userId = AuthComponent::user('id');
 	}
 
-	/*
-	  function beforeFilter() {
-	  if (!$this->Auth->isAuthorized()) {
-	  $authFlash = $this->controller->Auth->flash;
-	  $authMessage = Session::read('Message.' . $authFlash['element']);
-	  xdebug_break();
-	  //$this->authorize($apiName);
-	  }
-	  } */
+	function beforeFilter() {
+		if (!$this->Auth->isAuthorized() && !empty($this->settings['Apis'])) {
+			$usedApis = array_intersect($this->settings['Apis'], OauthConfig::getConfiguredApis());
+			foreach ($usedApis as $apiName) {
+				if (empty(OauthConfig::getAccessToken($apiName))) {
+					$this->Session->write('Oauth.redirect', $this->controller->request->here);
+					$this->connect($apiName);
+				}
+			}
+		}
+	}
 
 	/**
 	 * 
@@ -57,7 +61,7 @@ class OauthComponent extends Component {
 	public function authorizeV2($apiName, $requestOptions = array()) {
 		$request = $this->_getRequest($apiName, 'authorize');
 		$config = Configure::read("Apis.$apiName.oauth");
-		$credentials = OauthCredentials::getCredentials($apiName);
+		$credentials = OauthConfig::getCredentials($apiName);
 		$query = array(
 			'redirect_uri' => $config['callback'],
 			'client_id' => $credentials['key']
@@ -174,7 +178,7 @@ class OauthComponent extends Component {
 			if (!$this->Session->check("Oauth.$apiName.request_token")) {
 				throw new CakeException("Request token for API $apiName not found in Session.");
 			}
-			$credentials = OauthCredentials::getCredentials($apiName);
+			$credentials = OauthConfig::getCredentials($apiName);
 			$auth = array(
 				'oauth_consumer_key' => $credentials['key'],
 				'oauth_consumer_secret' => $credentials['secret'],
@@ -197,7 +201,7 @@ class OauthComponent extends Component {
 	 * @throws CakeException
 	 */
 	protected function _getRequest($apiName, $path) {
-		$credentials = OauthCredentials::getCredentials($apiName);
+		$credentials = OauthConfig::getCredentials($apiName);
 		$config = Configure::read('Apis.' . $apiName . '.oauth');
 		if (empty($config[$path])) {
 			throw new CakeException("Missing oauth config for $path.");
@@ -243,13 +247,13 @@ class OauthComponent extends Component {
 				'access_token' => $accessToken['access_token'],
 				'refresh_token' => $accessToken['refresh_token']
 			);
-			OauthCredentials::setAccessToken($apiName, $data['access_token']);
+			OauthConfig::setAccessToken($apiName, $data['access_token']);
 		} else {
 			$data = array(
 				'oauth_token' => $accessToken,
 				'oauth_token_secret' => $tokenSecret
 			);
-			OauthCredentials::setAccessToken($apiName, $data['oauth_token'], $data['oauth_token_secret']);
+			OauthConfig::setAccessToken($apiName, $data['oauth_token'], $data['oauth_token_secret']);
 		}
 		switch ($storageMethod) {
 			case 'Session':

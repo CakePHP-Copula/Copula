@@ -2,14 +2,14 @@
 
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
 App::uses('Token', 'Apis.Model');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('OauthConfig', 'Apis.Lib');
 /**
  * @property Token $Token
  */
 class OauthAuthorize extends BaseAuthorize {
 
 	public $Token;
-
+	
 	public function __construct(\ComponentCollection $collection, $settings = array()) {
 		$this->Token = ClassRegistry::init('Apis.Token');
 		$defaults = array('Apis' => array());
@@ -44,10 +44,10 @@ class OauthAuthorize extends BaseAuthorize {
 	}
 
 	protected function _checkTokenDb($apiName, $userId) {
-		$token = $this->Token->getTokenDb($userId, $apiName);
+		$token = $this->Token->getToken($userId, $apiName);
 		if (!empty($token['access_token'])) {
 			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
-			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
+			OauthConfig::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
 			return true;
 		} else {
 			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
@@ -61,7 +61,7 @@ class OauthAuthorize extends BaseAuthorize {
 		if (!empty($token['access_token'])) {
 			// check for token validity?
 			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
-			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
+			OauthConfig::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
 			return true;
 		} else {
 			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');

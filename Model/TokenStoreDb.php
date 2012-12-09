@@ -9,6 +9,7 @@ class Token extends ApisAppModel {
 
 	public $name = "Token";
 	public $useDbConfig = "default";
+	public $actsAs = array('TokenSource');
 	public $useTable = "tokens";
 	var $validate = array(
 		'id' => array(),
@@ -35,7 +36,7 @@ class Token extends ApisAppModel {
 	 * @param string $apiName the name of an API to search for
 	 * @return array token data
 	 */
-	function getTokenDb($user_id, $apiName) {
+	function getToken($user_id, $apiName) {
 		$result = $this->find('first', array(
 			'conditions' => array(
 				'user_id' => $user_id,
@@ -53,7 +54,7 @@ class Token extends ApisAppModel {
 	 * @param array $access_token
 	 * @param string $apiName
 	 */
-	function saveTokenDb(array $access_token, $apiName, $user_id = null) {
+	function saveToken(array $access_token, $apiName, $user_id = null) {
 		if (!$user_id && !empty($access_token['user_id'])) {
 			$user_id = $access_token['user_id'];
 		}

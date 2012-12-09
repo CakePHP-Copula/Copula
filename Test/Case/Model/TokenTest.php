@@ -1,6 +1,6 @@
 <?php
 
-App::uses('Token', 'Apis.Model');
+App::uses('TokenStoreDb', 'Apis.Model');
 App::uses('HttpResponse', 'Network/Http');
 App::uses('HttpSocket', 'Network/Http');
 
@@ -13,7 +13,7 @@ class TokenTestCase extends CakeTestCase {
 
 	var $fixtures = array('plugin.apis.token');
 	var $results = array(array(
-			'Token' => array(
+			'TokenStoreDb' => array(
 				'id' => '4',
 				'api' => 'testapi',
 				'user_id' => '1',
@@ -24,25 +24,25 @@ class TokenTestCase extends CakeTestCase {
 
 	function setUp() {
 		parent::setUp();
-		$this->Token = ClassRegistry::init('Apis.Token');
+		$this->Token = ClassRegistry::init('Apis.TokenStoreDb');
 	}
 
 	function testGetTokenDb() {
-		$token = $this->Token->getTokenDb('1', 'testapi');
+		$token = $this->Token->getToken('1', 'testapi');
 		$this->assertTrue(!empty($token['access_token']));
 
-		$noToken = $this->Token->getTokenDb('4', 'testapi');
+		$noToken = $this->Token->getToken('4', 'testapi');
 		$this->assertTrue(empty($noToken));
 	}
 
 	function testSaveTokenDb() {
-		$return = $this->Token->saveTokenDb($this->results[0]['Token'], 'testapi', '12');
+		$return = $this->Token->saveToken($this->results[0]['Token'], 'testapi', '12');
 		$this->assertTrue(!empty($return['Token']));
 	}
 
 	function testBeforeSave() {
 		unset($this->Token);
-		$this->Token = $this->getMock('Token', array('find'));
+		$this->Token = $this->getMock('TokenStoreDb', array('find'));
 		$this->Token->expects($this->any())
 				->method('find')
 				->will($this->returnValue($this->results));
