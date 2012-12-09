@@ -83,7 +83,7 @@ class OauthComponent extends Component {
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
-			return false();
+			return false;
 		}
                 parse_str($response->body(), $accessToken);
 		return $accessToken;
