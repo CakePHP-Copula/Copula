@@ -85,7 +85,8 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false();
 		}
-		return json_decode($response->body(), true);
+                parse_str($response->body(), $accessToken);
+		return $accessToken;
 	}
 
 	/**
@@ -108,7 +109,8 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false;
 		}
-		return json_decode($response->body(), true);
+		parse_str($response->body(), $accessToken);
+		return $accessToken;
 	}
 
 	/**
@@ -129,7 +131,8 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false;
 		}
-                return json_decode($response->body(), true);
+                parse_str($response->body(), $requestToken);
+		return $requestToken;
 	}
 
 	/**
