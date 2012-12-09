@@ -217,7 +217,7 @@ class OauthComponentTest extends CakeTestCase {
 	}
 
 	function testCallbackV2() {
-		$this->controller->request->addParams(array('url' => array('code' => 'tanstaafl')));
+		$this->controller->request->query = array('code' => 'tanstaafl');
 		unset($this->Oauth->Http);
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
@@ -246,7 +246,7 @@ class OauthComponentTest extends CakeTestCase {
 
 	function testCallbackV1() {
 		Configure::write('Apis.testapi.oauth.version', '1.0');
-		$this->controller->request->addParams(array('url' => array('oauth_verifier' => 'tanstaafl')));
+		$this->controller->request->query = array('oauth_verifier' => 'tanstaafl');
 		unset($this->Oauth->Http);
 		$this->Oauth->Http = $this->getMock('HttpSocket');
 		$response = new HttpSocketResponse();
