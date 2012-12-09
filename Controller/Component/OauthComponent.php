@@ -110,8 +110,7 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false;
 		}
-		parse_str($response->body(), $accessToken);
-		return $accessToken;
+		return json_decode($response->body(), true);
 	}
 
 	/**
