@@ -104,6 +104,7 @@ class OauthComponent extends Component {
 			'client_secret' => $request['auth']['client_secret'],
 			'code' => $token
 		);
+                unset($request['auth']);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
