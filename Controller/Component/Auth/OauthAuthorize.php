@@ -43,7 +43,7 @@ class OauthAuthorize extends BaseAuthorize {
 		return false;
 	}
         
-        private function _setToken($apiName, $token) {
+        private function __setToken($apiName, $token) {
 		if (!empty($token['access_token'])) {
 			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
 			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
@@ -56,13 +56,13 @@ class OauthAuthorize extends BaseAuthorize {
         
 	protected function _checkTokenDb($apiName, $userId) {
 		$token = $this->Token->getTokenDb($userId, $apiName);
-                return $this->_setToken($apiName, $token);
+                return $this->__setToken($apiName, $token);
 	}
 
 	protected function _checkTokenSession($apiName, $userId) {
 		App::uses('CakeSession', 'Model/Datasource');
 		$token = CakeSession::read('Oauth.' . $apiName);
-		return $this->_setToken($apiName, $token);
+		return $this->__setToken($apiName, $token);
 	}
 
 	protected function _checkTokenCookie($apiName, $userId) {
