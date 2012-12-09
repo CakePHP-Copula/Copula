@@ -51,7 +51,7 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 		unset($this->auth->Token);
 		$this->auth->Token = $this->getMock('Token');
 		$this->auth->Token->expects($this->any())
-				->method('getTokenDb')
+				->method('getToken')
 				->will($this->returnValue(array()));
 		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
 	}

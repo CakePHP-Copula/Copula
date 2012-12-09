@@ -1,7 +1,7 @@
 <?php
 
 App::uses('HttpSocket', 'Network/Http');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('OauthConfig', 'Apis.Lib');
 /**
  * Description of AccessToken
  *
@@ -81,7 +81,7 @@ class AccessTokenBehavior extends ModelBehavior {
 	 * @return array containing oauth credentials for the datasource
 	 */
 	protected function _getCredentials(\Model $model) {
-		return OauthCredentials::getCredentials(strtolower($this->config[$model->alias]['Api']));
+		return OauthConfig::getCredentials(strtolower($this->config[$model->alias]['Api']));
 	}
 
 	/**
@@ -124,7 +124,7 @@ class AccessTokenBehavior extends ModelBehavior {
 	 */
 	public function getToken(\Model $model, $user_id) {
 		$Token = ClassRegistry::init('Apis.Token');
-		$token = $Token->getTokenDb($user_id, $this->config[$model->alias]['Api']);
+		$token = $Token->getToken($user_id, $this->config[$model->alias]['Api']);
 		if (!empty($token['access_token']) && $this->isExpired($model, $token)) {
 			return $this->getRefreshAccess($model, $token);
 		}
@@ -140,7 +140,7 @@ class AccessTokenBehavior extends ModelBehavior {
 	 * @author Ceeram
 	 */
 	public function setDbConfig(\Model $model, $source = null, $useTable = null) {
-		$datasource = $this->getDataSource();
+		$datasource = $model->getDataSource();
 		if (method_exists($datasource, 'flushMethodCache')) {
 			$datasource->flushMethodCache();
 		}

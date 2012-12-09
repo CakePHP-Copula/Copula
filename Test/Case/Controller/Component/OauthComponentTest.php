@@ -46,7 +46,6 @@ class OauthComponentTest extends CakeTestCase {
 		$this->controller = new TestController($Request, $Response);
 		$this->controller->constructClasses();
 		$this->Oauth = new OauthComponent($collection);
-		OauthCredentials::reset();
 		ConnectionManager::create('testapi', array(
 			'datasource' => 'Apis.ApisSource',
 			'login' => 'login',
@@ -66,7 +65,6 @@ class OauthComponentTest extends CakeTestCase {
 	}
 
 	function tearDown() {
-		OauthCredentials::reset();
 		Configure::delete('Apis.testapi.oauth');
 		ConnectionManager::drop('testapi');
 		unset($this->controller);
@@ -236,7 +234,7 @@ class OauthComponentTest extends CakeTestCase {
 				->will($this->returnValueMap(array(array($request, $response))));
 		$this->Oauth->userId = '1';
 		$this->Oauth->callback('testapi');
-		$this->assertEquals(array('token'), OauthCredentials::getAccessToken('testapi'));
+		$this->assertEquals(array('token'), OauthConfig::getAccessToken('testapi'));
 	}
 
 	function testCallbackV1() {
@@ -276,7 +274,7 @@ class OauthComponentTest extends CakeTestCase {
 				->method('check')
 				->will($this->returnValue(true));
 		$token = $this->Oauth->callback('testapi');
-		$this->assertEquals(array_values($token), array_values(OauthCredentials::getAccessToken('testapi')));
+		$this->assertEquals(array_values($token), array_values(OauthConfig::getAccessToken('testapi')));
 	}
 
 }
