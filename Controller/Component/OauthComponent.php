@@ -188,6 +188,9 @@ class OauthComponent extends Component {
 				$this->store($apiName, $accessToken['oauth_token'], $accessToken['oauth_token_secret']);
 				return $accessToken;
 			}
+			} else {
+                                throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
+                        }
 		}
 	}
 
