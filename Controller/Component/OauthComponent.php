@@ -83,13 +83,14 @@ class OauthComponent extends Component {
 	 */
 	public function getAccessToken($apiName, array $authVars, $requestOptions = array()) {
 		$request = $this->_getRequest($apiName, 'access');
-		$request['auth'] = $authVars;
+		$request['auth'] = array_merge($request['auth'], $authVars);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
-			return false();
+			return false;
 		}
-		return json_decode($response->body(), true);
+                parse_str($response->body(), $accessToken);
+		return $accessToken;
 	}
 
 	/**
@@ -107,7 +108,7 @@ class OauthComponent extends Component {
 			'client_secret' => $request['auth']['client_secret'],
 			'code' => $token
 		);
-		unset($request['auth']);
+                unset($request['auth']);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
@@ -129,14 +130,13 @@ class OauthComponent extends Component {
 		if (!empty($scope)) {
 			$request['uri']['query'] = $this->_buildQuery(array('scope' => $scope));
 		}
-		unset($request['auth']['method']);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
-		if ($response->isOk()) {
-			return json_decode($response->body(), true);
-		} else {
+		if (!$response->isOk()) {
 			return false;
 		}
+                parse_str($response->body(), $requestToken);
+		return $requestToken;
 	}
 
 	/**
@@ -152,7 +152,9 @@ class OauthComponent extends Component {
 			if ($token) {
 				$this->Session->write("Oauth.$apiName.request_token", $token);
 				$this->authorize($apiName, $token['oauth_token']);
-			}
+			} else {
+                                throw new CakeException(__('No Request Token is present for the %s API.', $apiName));
+                        }
 		}
 	}
 
@@ -164,15 +166,15 @@ class OauthComponent extends Component {
 	function callback($apiName) {
 		$method = Configure::read("Apis.$apiName.oauth.version");
 		if ($method == '2.0') {
-			if (empty($this->controller->request->params['url']['code'])) {
+			if (empty($this->controller->request->query['code'])) {
 				throw new CakeException("Authorization token for API $apiName not received.");
 			}
-			$oAuthCode = $this->controller->request->params['url']['code'];
+			$oAuthCode = $this->controller->request->query['code'];
 			$accessToken = $this->getAccessTokenV2($apiName, $oAuthCode);
 			$this->store($apiName, $accessToken);
 			return $accessToken;
 		} elseif ($method == '1.0') {
-			if (empty($this->controller->request->params['url']['oauth_verifier'])) {
+			if (empty($this->controller->request->query['oauth_verifier'])) {
 				throw new CakeException("Oauth verification code for API $apiName not found.");
 			}
 			if (!$this->Session->check("Oauth.$apiName.request_token")) {
@@ -182,14 +184,16 @@ class OauthComponent extends Component {
 			$auth = array(
 				'oauth_consumer_key' => $credentials['key'],
 				'oauth_consumer_secret' => $credentials['secret'],
-				'oauth_verifier' => $this->controller->request->params['url']['oauth_verifier']
+				'oauth_verifier' => $this->controller->request->query['oauth_verifier']
 			);
 			$authVars = array_merge($auth, $this->Session->read("Oauth.$apiName.request_token"));
 			$accessToken = $this->getAccessToken($apiName, $authVars);
 			if ($accessToken) {
 				$this->store($apiName, $accessToken['oauth_token'], $accessToken['oauth_token_secret']);
 				return $accessToken;
-			}
+			} else {
+                                throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
+                        }
 		}
 	}
 
