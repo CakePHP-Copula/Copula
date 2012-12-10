@@ -14,8 +14,8 @@ class Token extends ApisAppModel {
 	var $validate = array(
 		'id' => array(),
 		'user_id' => array(
-			'numeric' => array(
-				'rule' => 'numeric',
+			'alphaNumeric' => array(
+				'rule' => 'alphaNumeric',
 				'message' => 'user_id must be numeric'
 			),
 			'unique' => array(

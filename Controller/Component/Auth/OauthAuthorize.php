@@ -3,6 +3,7 @@
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
 App::uses('Token', 'Apis.Model');
 App::uses('OauthConfig', 'Apis.Lib');
+
 /**
  * @property Token $Token
  */
@@ -19,10 +20,10 @@ class OauthAuthorize extends BaseAuthorize {
 
 	public function authorize($user, \CakeRequest $request) {
 		$dbs = ConnectionManager::sourceList();
-		$apiNames = array_intersect(array_keys($this->settings['Apis']), array_values($dbs));
+		$apiNames = array_intersect(array_keys($this->controller()->Apis), array_values($dbs));
 		$count = 0;
 		foreach ($apiNames as $index => $name) {
-			switch ($this->settings['Apis'][$name]['store']) {
+			switch ($this->controller()->Apis[$name]['store']) {
 				case 'Session':
 					$allowed = $this->_checkTokenSession($name, $user['id']);
 					break;
@@ -42,8 +43,8 @@ class OauthAuthorize extends BaseAuthorize {
 		}
 		return false;
 	}
-        
-        private function __setToken($apiName, $token) {
+
+	protected function _setToken($apiName, $token) {
 		if (!empty($token['access_token'])) {
 			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
 			OauthConfig::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
@@ -51,18 +52,18 @@ class OauthAuthorize extends BaseAuthorize {
 		} else {
 			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
 			return false;
-		}  
-        }
-        
+		}
+	}
+
 	protected function _checkTokenDb($apiName, $userId) {
 		$token = $this->Token->getTokenDb($userId, $apiName);
-                return $this->__setToken($apiName, $token);
+		return $this->_setToken($apiName, $token);
 	}
 
 	protected function _checkTokenSession($apiName, $userId) {
 		App::uses('CakeSession', 'Model/Datasource');
 		$token = CakeSession::read('Oauth.' . $apiName);
-		return $this->__setToken($apiName, $token);
+		return $this->_setToken($apiName, $token);
 	}
 
 	protected function _checkTokenCookie($apiName, $userId) {

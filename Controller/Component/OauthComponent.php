@@ -89,7 +89,7 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false;
 		}
-                parse_str($response->body(), $accessToken);
+		parse_str($response->body(), $accessToken);
 		return $accessToken;
 	}
 
@@ -108,7 +108,7 @@ class OauthComponent extends Component {
 			'client_secret' => $request['auth']['client_secret'],
 			'code' => $token
 		);
-                unset($request['auth']);
+		unset($request['auth']);
 		$request = Hash::merge($request, $requestOptions);
 		$response = $this->Http->request($request);
 		if (!$response->isOk()) {
@@ -135,7 +135,7 @@ class OauthComponent extends Component {
 		if (!$response->isOk()) {
 			return false;
 		}
-                parse_str($response->body(), $requestToken);
+		parse_str($response->body(), $requestToken);
 		return $requestToken;
 	}
 
@@ -153,8 +153,8 @@ class OauthComponent extends Component {
 				$this->Session->write("Oauth.$apiName.request_token", $token);
 				$this->authorize($apiName, $token['oauth_token']);
 			} else {
-                                throw new CakeException(__('No Request Token is present for the %s API.', $apiName));
-                        }
+				throw new CakeException(__('No Request Token is present for the %s API.', $apiName));
+			}
 		}
 	}
 
@@ -192,8 +192,8 @@ class OauthComponent extends Component {
 				$this->store($apiName, $accessToken['oauth_token'], $accessToken['oauth_token_secret']);
 				return $accessToken;
 			} else {
-                                throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
-                        }
+				throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
+			}
 		}
 	}
 
@@ -245,7 +245,7 @@ class OauthComponent extends Component {
 	 * @param string $tokenSecret
 	 */
 	public function store($apiName, $accessToken, $tokenSecret = null) {
-		$storageMethod = $this->controller->Auth->authorize['Apis'][$apiName]['store'];
+		$storageMethod = $this->controller->Apis[$apiName]['store'];
 		if (is_array($accessToken) && empty($tokenSecret)) {
 			$data = array(
 				'access_token' => $accessToken['access_token'],
