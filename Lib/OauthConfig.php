@@ -1,9 +1,8 @@
 <?php
 
-class OauthConfig {
+App::uses('ConnectionManager', 'Model');
 
-	protected static $_initialized = false;
-	protected static $_Apis = array();
+class OauthConfig {
 
 	public static function getConfiguredApis() {
 		$objects = ConnectionManager::enumConnectionObjects();
@@ -41,14 +40,15 @@ class OauthConfig {
 		}
 		return array();
 	}
-/**
- * 
- * @param string $dbConfig
- * @return string|boolean
- */
+
+	/**
+	 * 
+	 * @param string $dbConfig
+	 * @return string|boolean
+	 */
 	public static function isOauthApi($dbConfig) {
 		$config = ConnectionManager::getDataSource($dbConfig)->config;
-		if(in_array($config['authMethod'], array('OAuth', 'OAuthV2'))){
+		if (in_array($config['authMethod'], array('OAuth', 'OAuthV2'))) {
 			return $config['authMethod'];
 		} else {
 			return false;
@@ -63,24 +63,26 @@ class OauthConfig {
 	 * @return boolean
 	 */
 	public static function setAccessToken($dbConfig, $token, $tokenSecret = null) {
-			ConnectionManager::getDataSource($dbConfig)->config['access_token'] = $token;
-			if ($tokenSecret) {
-				ConnectionManager::getDataSource($dbConfig)->config['token_secret'] = $tokenSecret;
-			}
-			return true;
+		ConnectionManager::getDataSource($dbConfig)->config['access_token'] = $token;
+		if ($tokenSecret) {
+			ConnectionManager::getDataSource($dbConfig)->config['token_secret'] = $tokenSecret;
+		}
+		return true;
 	}
+
 	/**
 	 * 
 	 * @param string $dbConfig The name of the Api config
 	 * @param string $path The type of path to return, e.g. 'access', 'request', or 'authorize'
 	 * @return string The assembled URI
 	 */
-	public static function getRequestUri($dbConfig, $path){
+	public static function getRequestUri($dbConfig, $path) {
 		$config = ConnectionManager::getDataSource($dbConfig)->config;
-		if(!empty($config[$path])){
+		if (!empty($config[$path])) {
 			return $config['scheme'] . $config['host'] . $config[$path];
 		}
 	}
+
 }
 
 ?>

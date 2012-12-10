@@ -8,8 +8,9 @@ class TokenSource extends DataSource {
 
 	public $description = 'DataSource for Oauth Tokens';
 
-	protected function _getHttpObject() {
-		return new HttpSocketOauth();
+	public function __construct($config = array()) {
+		$this->Http = new HttpSocketOauth();
+		parent::__construct($config);
 	}
 
 	public function read(\Model $model, array $queryData) {
@@ -17,10 +18,15 @@ class TokenSource extends DataSource {
 		if (!empty($queryData['options'])) {
 			$request = array_merge($request, $queryData['options']);
 		}
-		$Http = $this->_getHttpObject();
-		$response = $Http->request($request);
+		$response = $this->Http->request($request);
 		if ($response->isOK()) {
-			return json_decode($response, true);
+			$json = array('application/json', 'application/javascript', 'text/javascript');
+			if (in_array($json, $contentType = explode(';', $response->getHeader('Content-Type'))[0])) {
+				return json_decode($response->body, true);
+			} else{
+				$token = parse_str($response->body, $token);
+				return $token;
+			}
 		} else {
 			$model->onError();
 			return false;
