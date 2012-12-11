@@ -2,7 +2,6 @@
 
 App::uses('DataSource', 'Model/Datasource');
 App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
-App::uses('OauthConfig', 'Apis.Lib');
 
 class TokenSource extends DataSource {
 
@@ -52,8 +51,13 @@ class TokenSource extends DataSource {
 		return $request;
 	}
 
-	protected function _requestOauth($queryData) {
-		
+	protected function _requestOauth() {
+		$request = $this->_getRequest('request');
+		$request['auth']['callback'] = $this->config['callback'];
+		if(!empty($this->config['scope'])){
+			$request['uri']['query'] = $this->_buildQuery(array('scope' => $this->config['scope']));
+		}
+		return $request;
 	}
 
 	protected function _buildQuery($query, $escape = false) {
