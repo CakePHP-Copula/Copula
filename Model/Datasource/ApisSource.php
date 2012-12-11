@@ -178,7 +178,7 @@ class ApisSource extends DataSource {
 		$Http->request($model->request);
 
 		$this->took = round((microtime(true) - $t) * 1000, 0);
-		$this->logQuery($model, $Http->response);
+		$this->logQuery($model, $Http);
 
 		$model->response = $this->decode($Http->response);
 
@@ -196,9 +196,9 @@ class ApisSource extends DataSource {
 	 * @param \HttpSocketResponse $response
 	 * @return void
 	 */
-	public function logQuery(Model $model, \HttpSocketResponse$response) {
+	public function logQuery(Model $model, \HttpSocket $Http) {
 		if (Configure::read('debug')) {
-			$logItems = array($model->request['raw'], $response->raw);
+			$logItems = array($Http->request['raw'], $Http->response->raw);
 			foreach ($logItems as &$logPart) {
 				if (strlen($logPart) > $this->_logLimitBytes) {
 					$logPart = substr($logPart, 0, $this->_logLimitBytes) . ' [ ... truncated ...]';
