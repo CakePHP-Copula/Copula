@@ -111,19 +111,18 @@ class ApisSourceTest extends CakeTestCase {
 
 	function testLogQuery() {
 		$t = microtime(true);
-		$response = new HttpSocketResponse();
-		$response->raw = "This is a string to be logged";
-		$this->model->request = array();
-		$this->model->request['raw'] = "This is another string";
+		$Http = new HttpSocket();
+		$Http->response->raw = "This is a string to be logged";
+		$Http->request['raw'] = "This is another string";
 		Configure::write('debug', '1');
 		$this->Apis->took = round((microtime(true) - $t) * 1000, 0);
-		$this->Apis->logQuery($this->model, $response);
+		$this->Apis->logQuery($this->model, $Http);
 		$log = $this->Apis->getLog(false);
-		$this->assertEquals($this->model->request['raw'], $log['log'][0]['query']);
-		$this->assertEquals($response->raw, $log['log'][0]['response']);
+		$this->assertEquals($Http->request['raw'], $log['log'][0]['query']);
+		$this->assertEquals($Http->response->raw, $log['log'][0]['response']);
 		$this->assertEquals($this->Apis->took, $log['log'][0]['took']);
-		$this->model->request['raw'] .= str_repeat('abcdef', 1000);
-		$this->Apis->logQuery($this->model, $response);
+		$Http->request['raw'] .= str_repeat('abcdef', 1000);
+		$this->Apis->logQuery($this->model, $Http);
 		$log2 = $this->Apis->getLog(false);
 		$this->assertTrue((substr($log2['log'][0]['query'], '-20')) == '[ ... truncated ...]');
 	}
