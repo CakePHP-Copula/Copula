@@ -172,10 +172,10 @@ class ApisSource extends DataSource {
 			$model->request = $this->beforeRequest($model);
 		}
 
-		$Http = $this->getHttpObject($model->request);
+		$Http = $this->getHttpObject();
 		$t = microtime(true);
 
-		$Http->request();
+		$Http->request($model->request);
 
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 		$this->logQuery($model, $Http->response);
