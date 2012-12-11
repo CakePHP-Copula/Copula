@@ -9,13 +9,13 @@ class Token extends ApisAppModel {
 
 	public $name = "Token";
 	public $useDbConfig = "default";
-	public $actsAs = array('TokenSource');
+	public $actsAs = array('TokenStore');
 	public $useTable = "tokens";
 	var $validate = array(
 		'id' => array(),
 		'user_id' => array(
-			'alphaNumeric' => array(
-				'rule' => 'alphaNumeric',
+			'numeric' => array(
+				'rule' => 'numeric',
 				'message' => 'user_id must be numeric'
 			),
 			'unique' => array(
@@ -54,10 +54,7 @@ class Token extends ApisAppModel {
 	 * @param array $access_token
 	 * @param string $apiName
 	 */
-	function saveToken(array $access_token, $apiName, $user_id = null) {
-		if (!$user_id && !empty($access_token['user_id'])) {
-			$user_id = $access_token['user_id'];
-		}
+	function saveToken(array $access_token, $apiName, $user_id) {
 		if (!empty($access_token['oauth_token'])) {
 			$data = array('Token' => array(
 				'access_token' => $access_token['oauth_token'],

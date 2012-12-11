@@ -63,11 +63,17 @@ class OauthConfig {
 	 * @return boolean
 	 */
 	public static function setAccessToken($dbConfig, $token, $tokenSecret = null) {
-		ConnectionManager::getDataSource($dbConfig)->config['access_token'] = $token;
-		if ($tokenSecret) {
-			ConnectionManager::getDataSource($dbConfig)->config['token_secret'] = $tokenSecret;
+		$method = self::isOauthApi($dbConfig);
+		if ($method) {
+			$config = ConnectionManager::getDataSource($dbConfig)->config;
+			$config['access_token'] = $token;
+			if ($method == 'OAuth') {
+				$config['token_secret'] = $tokenSecret;
+			} elseif ($method == 'OAuthV2') {
+				$config['refresh_token'] = $tokenSecret;
+			}
+			return true;
 		}
-		return true;
 	}
 
 	/**
@@ -76,10 +82,19 @@ class OauthConfig {
 	 * @param string $path The type of path to return, e.g. 'access', 'request', or 'authorize'
 	 * @return string The assembled URI
 	 */
-	public static function getRequestUri($dbConfig, $path) {
+	public static function getAuthUri($dbConfig, $path, $extra = array()) {
 		$config = ConnectionManager::getDataSource($dbConfig)->config;
 		if (!empty($config[$path])) {
-			return $config['scheme'] . $config['host'] . $config[$path];
+			if ($config['authMethod'] == 'OAuth') {
+				return $config['scheme'] . $config['host'] . $config[$path];
+			} elseif ($config['authMethod'] == 'OAuthV2') {
+				$uri = $config['scheme'] . $config['host'] . $config[$path];
+				$query = array('redirect_uri' => $config['callback'], 'client_id' => $config['login']);
+				if (!empty($config['scope'])) {
+					$query['scope'] = $config['scope'];
+				}
+				return $uri . Router::queryString($query, $extra);
+			}
 		}
 	}
 
