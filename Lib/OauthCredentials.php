@@ -42,7 +42,7 @@ class OauthCredentials {
                                         'refresh_token' => '',
                                 );
                         }
-			return $tokens;
+			return array_filter($tokens);
 		}
 		return array();
 	}
