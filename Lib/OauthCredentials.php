@@ -31,9 +31,18 @@ class OauthCredentials {
 			self::_init();
 		}
 		if(!empty(self::$Apis[$apiName]) && !empty(self::$Apis[$apiName]['access_token'])){
-			$token = self::$Apis[$apiName]['access_token'];
-			$tokenSecret = (isset(self::$Apis[$apiName]['token_secret']))? self::$Apis[$apiName]['token_secret'] : null;
-			return array_filter(array($token, $tokenSecret));
+                        if (self::$Apis[$apiName]['authMethod'] == 'OAuth') {
+                                $tokens = array(
+                                        'access_token' => self::$Apis[$apiName]['access_token'],
+                                        'token_secret' => (isset(self::$Apis[$apiName]['token_secret']))? self::$Apis[$apiName]['token_secret'] : null,
+                                );
+                        } else {
+                                $tokens = array(
+                                        'access_token' => self::$Apis[$apiName]['access_token'],
+                                        'refresh_token' => '',
+                                );
+                        }
+			return $tokens;
 		}
 		return array();
 	}
