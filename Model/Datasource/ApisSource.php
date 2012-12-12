@@ -317,7 +317,7 @@ class ApisSource extends DataSource {
 	 */
 	protected function _scanMap($action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
-			throw new CakeException('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this), 500);
+			throw new CakeException(__('Section %s not found in Apis Driver Configuration Map - ', $section) . get_class($this), 500);
 		}
 		$map = $this->map[$action][$section];
 		foreach ($map as $path => $conditions) {
@@ -327,7 +327,7 @@ class ApisSource extends DataSource {
 				return array($path, $conditions, $optional);
 			}
 		}
-		throw new CakeException('[ApiSource] Could not find a match for passed conditions', 500);
+		throw new CakeException(__('[ApiSource] Could not find a match for passed conditions'), 500);
 	}
 
 	/**

@@ -163,7 +163,7 @@ class OauthComponent extends Component {
 		$method = Configure::read("Apis.$apiName.oauth.version");
 		if ($method == '2.0') {
 			if (empty($this->controller->request->query['code'])) {
-				throw new CakeException("Authorization token for API $apiName not received.");
+				throw new CakeException(__("Authorization token for API %s not received.", $apiName));
 			}
 			$oAuthCode = $this->controller->request->query['code'];
 			$accessToken = $this->getAccessTokenV2($apiName, $oAuthCode);
@@ -171,10 +171,10 @@ class OauthComponent extends Component {
 			return $accessToken;
 		} elseif ($method == '1.0') {
 			if (empty($this->controller->request->query['oauth_verifier'])) {
-				throw new CakeException("Oauth verification code for API $apiName not found.");
+				throw new CakeException(__("OAuth verification code for API %s not found.", $apiName));
 			}
 			if (!$this->Session->check("Oauth.$apiName.request_token")) {
-				throw new CakeException("Request token for API $apiName not found in Session.");
+				throw new CakeException(__("Request token for API %s not found in Session.", $apiName));
 			}
 			$credentials = OauthCredentials::getCredentials($apiName);
 			$auth = array(
@@ -204,7 +204,7 @@ class OauthComponent extends Component {
 		$credentials = OauthCredentials::getCredentials($apiName);
 		$config = Configure::read('Apis.' . $apiName . '.oauth');
 		if (empty($config[$path])) {
-			throw new CakeException("Missing oauth config for $path.");
+			throw new CakeException(__("Missing oauth config for %s.", $path));
 		}
 		$request = array(
 			'method' => 'GET',
