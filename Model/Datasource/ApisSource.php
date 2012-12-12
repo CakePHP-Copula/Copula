@@ -369,6 +369,9 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
+                if (is_null($queryData['conditions'])) {
+                        $queryData['conditions'] = array();
+                }
 		$model->request = $this->_buildRequest($model->useDbConfig, 'read');
 		if (!empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
