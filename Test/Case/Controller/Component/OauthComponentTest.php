@@ -241,7 +241,7 @@ class OauthComponentTest extends CakeTestCase {
 				->will($this->returnValueMap(array(array($request, $response))));
 		$this->Oauth->userId = '1';
 		$this->Oauth->callback('testapi');
-		$this->assertEquals(array('token'), OauthCredentials::getAccessToken('testapi'));
+		$this->assertEquals(array('access_token' => 'token'), OauthCredentials::getAccessToken('testapi'));
 	}
 
 	function testCallbackV1() {
@@ -282,6 +282,7 @@ class OauthComponentTest extends CakeTestCase {
 				->method('check')
 				->will($this->returnValue(true));
 		$token = $this->Oauth->callback('testapi');
+                OauthCredentials::$Apis['testapi']['authMethod'] = 'OAuth';
 		$this->assertEquals(array_values($token), array_values(OauthCredentials::getAccessToken('testapi')));
 	}
 
