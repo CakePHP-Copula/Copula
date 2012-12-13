@@ -1,7 +1,7 @@
 <?php
 
 App::uses('TokenSource', 'Apis.Model');
-App::uses('TokenStore', 'Apis.Model');
+App::uses('TokenStoreDb', 'Apis.Model');
 App::uses('OauthConfig', 'Apis.Lib');
 
 /**
@@ -15,20 +15,21 @@ class OauthComponent extends Component {
 	public $controller;
 
 	function __construct(\ComponentCollection $collection, $settings = array()) {
-		$this->Apis = $this->controller->Apis;
-		$this->TokenSource = ClassRegistry::init('TokenSource');
+		$this->TokenSource = ClassRegistry::init('Apis.TokenSource');
 		parent::__construct($collection, $settings);
 	}
 
 	function initialize(\Controller $controller) {
 		$this->controller = $controller;
+		$this->Apis = $this->controller->Apis;
 	}
 
 	function beforeFilter() {
 		if (!$this->Auth->isAuthorized() && !empty($this->Apis)) {
 			$usedApis = array_intersect($this->Apis, OauthConfig::getConfiguredApis());
 			foreach ($usedApis as $apiName) {
-				if (empty(OauthConfig::getAccessToken($apiName))) {
+				$token = OauthConfig::getAccessToken($apiName);
+				if (empty($token)) {
 					$this->Session->write('Oauth.redirect', $this->controller->request->here);
 					$this->connect($apiName);
 				}
@@ -44,7 +45,7 @@ class OauthComponent extends Component {
 	 */
 	public function authorize($apiName, $requestToken, $extra = array()) {
 		$query = Router::queryString(array('oauth_token' => $requestToken), $extra);
-		$uri = OauthConfig::getAuthUri($apiName, 'authorize');
+		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize');
 		$this->controller->redirect($uri . $query);
 	}
 
@@ -54,7 +55,7 @@ class OauthComponent extends Component {
 	 * @param array $requestOptions
 	 */
 	public function authorizeV2($apiName, $requestOptions = array()) {
-		$uri = OauthConfig::getAuthUri($apiName, 'authorize', $requestOptions);
+		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize', $requestOptions);
 		$this->controller->redirect($uri);
 	}
 
@@ -106,7 +107,7 @@ class OauthComponent extends Component {
 	 * @param string $apiName
 	 */
 	function connect($apiName) {
-		$method = OauthConfig::isOauthApi($apiName);
+		$method = OauthConfig::isOauthApi($apiName . 'Token');
 		if ($method) {
 			if ($method == 'OAuthV2') {
 				$this->authorizeV2($apiName);
@@ -130,7 +131,7 @@ class OauthComponent extends Component {
 	 * @throws CakeException
 	 */
 	function callback($apiName) {
-		$method = OauthConfig::isOauthApi($apiName);
+		$method = OauthConfig::isOauthApi($apiName . 'Token');
 		if ($method == 'OAuthV2') {
 			if (empty($this->controller->request->query['code'])) {
 				throw new CakeException("Authorization token for API $apiName not received.");
@@ -190,7 +191,7 @@ class OauthComponent extends Component {
 				$this->Session->write("Oauth.$apiName", $data);
 				break;
 			default:
-				$this->TokenStore = ClassRegistry::init('TokenStore');
+				$this->TokenStore = ClassRegistry::init('Apis.TokenStoreDb');
 				return $this->TokenStore->saveToken($data, $apiName, AuthComponent::user('id'));
 				break;
 		}

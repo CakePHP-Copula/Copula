@@ -5,11 +5,11 @@
  * @subpackage model
  * @package Apis
  */
-class Token extends ApisAppModel {
+class TokenStoreDb extends ApisAppModel {
 
-	public $name = "Token";
+	public $name = "TokenStore";
 	public $useDbConfig = "default";
-	public $actsAs = array('TokenStore');
+	//public $actsAs = array('TokenStore');
 	public $useTable = "tokens";
 	var $validate = array(
 		'id' => array(),

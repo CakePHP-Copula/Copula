@@ -2,14 +2,15 @@
 
 class TokenSource extends ApisAppModel {
 
-	public $findMethods = array('request', 'access');
+	public $findMethods = array('request' => true, 'access' => true);
 	public $useTable = false;
 
 	function buildQuery($type = 'access', $query = array()) {
 		$query = array_merge(array(
 			'options' => array(),
 			'api' => null,
-			'requestToken' => array()
+			'requestToken' => array(),
+			'callbacks' => true
 				), $query);
 
 		if ($this->findMethods[$type] === true) {

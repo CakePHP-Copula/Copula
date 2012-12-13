@@ -1,11 +1,13 @@
 <?php
 
+CakePlugin::load('HttpSocketOauth');
 App::uses('DataSource', 'Model/Datasource');
 App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 
-class TokenSource extends DataSource {
+class RemoteTokenSource extends DataSource {
 
 	public $description = 'DataSource for Oauth Tokens';
+	public $Http;
 
 	public function __construct($config = array()) {
 		$this->Http = new HttpSocketOauth();
@@ -20,10 +22,11 @@ class TokenSource extends DataSource {
 		$response = $this->Http->request($request);
 		if ($response->isOK()) {
 			$json = array('application/json', 'application/javascript', 'text/javascript');
-			if (in_array($json, $contentType = explode(';', $response->getHeader('Content-Type'))[0])) {
-				return json_decode($response->body, true);
-			} else{
-				$token = parse_str($response->body, $token);
+			$contentType = explode(';', $response->getHeader('Content-Type'));
+			if (in_array($contentType[0], $json)) {
+				return json_decode($response->body(), true);
+			} else {
+				parse_str($response->body(), $token);
 				return $token;
 			}
 		} else {
@@ -32,15 +35,15 @@ class TokenSource extends DataSource {
 		}
 	}
 
-	protected function _accessOauth($queryData) {
+	protected function _accessOAuth($queryData) {
 		$request = $this->_getRequest('access');
-		$request['auth']['oauth_verifier'] = $queryData['requestToken']['verifier'];
-		$request['auth']['oauth_request_token'] = $queryData['requestToken']['request_token'];
-		$request['auth']['oauth_request_token_secret'] = $queryData['requestToken']['token_secret'];
+		$request['auth']['oauth_verifier'] = $queryData['requestToken']['oauth_verifier'];
+		$request['auth']['oauth_token'] = $queryData['requestToken']['oauth_token'];
+		$request['auth']['oauth_token_secret'] = $queryData['requestToken']['oauth_token_secret'];
 		return $request;
 	}
 
-	protected function _accessOauthV2($queryData) {
+	protected function _accessOAuthV2($queryData) {
 		$request = $this->_getRequest('access', 'POST');
 		$request['body'] = array(
 			'client_id' => $request['auth']['client_id'],
@@ -51,10 +54,10 @@ class TokenSource extends DataSource {
 		return $request;
 	}
 
-	protected function _requestOauth() {
+	protected function _requestOAuth() {
 		$request = $this->_getRequest('request');
-		$request['auth']['callback'] = $this->config['callback'];
-		if(!empty($this->config['scope'])){
+		$request['auth']['oauth_callback'] = $this->config['callback'];
+		if (!empty($this->config['scope'])) {
 			$request['uri']['query'] = $this->_buildQuery(array('scope' => $this->config['scope']));
 		}
 		return $request;
@@ -83,6 +86,7 @@ class TokenSource extends DataSource {
 		switch ($this->config['authMethod']) {
 			case 'OAuth':
 				$request['auth'] = array(
+					'method' => 'OAuth',
 					'oauth_consumer_key' => $this->config['login'],
 					'oauth_consumer_secret' => $this->config['password']
 				);
@@ -100,4 +104,5 @@ class TokenSource extends DataSource {
 	}
 
 }
+
 ?>

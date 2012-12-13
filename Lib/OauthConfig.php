@@ -30,15 +30,20 @@ class OauthConfig {
 	 * 
 	 * @param string $dbConfig
 	 * @return array
-	 */
+	 */	
 	public static function getAccessToken($dbConfig) {
 		$config = ConnectionManager::getDataSource($dbConfig)->config;
+		$token = array();
 		if (!empty($config['access_token'])) {
-			$token = $config['access_token'];
-			$tokenSecret = (isset($config['token_secret'])) ? $config['token_secret'] : null;
-			return array_filter(array($token, $tokenSecret));
+			if ($config['authMethod'] == 'OAuth') {
+				$token['oauth_token'] = $config['access_token'];
+				$token['oauth_token_secret'] = (!empty($config['token_secret'])) ? $config['token_secret'] : null;
+			} elseif ($config['authMethod'] == 'OAuthV2') {
+				$token['access_token'] = $config['access_token'];
+				$token['refresh_token'] = (!empty($config['refresh_token'])) ? $config['refresh_token'] : null;
+			}
 		}
-		return array();
+		return array_filter($token);
 	}
 
 	/**
@@ -65,13 +70,14 @@ class OauthConfig {
 	public static function setAccessToken($dbConfig, $token, $tokenSecret = null) {
 		$method = self::isOauthApi($dbConfig);
 		if ($method) {
-			$config = ConnectionManager::getDataSource($dbConfig)->config;
+			$config = array();
 			$config['access_token'] = $token;
 			if ($method == 'OAuth') {
 				$config['token_secret'] = $tokenSecret;
 			} elseif ($method == 'OAuthV2') {
 				$config['refresh_token'] = $tokenSecret;
 			}
+			ConnectionManager::getDataSource($dbConfig)->setConfig($config);
 			return true;
 		}
 	}
@@ -86,9 +92,9 @@ class OauthConfig {
 		$config = ConnectionManager::getDataSource($dbConfig)->config;
 		if (!empty($config[$path])) {
 			if ($config['authMethod'] == 'OAuth') {
-				return $config['scheme'] . $config['host'] . $config[$path];
+				return $config['scheme'] . '://' . $config['host'] . '/' . $config[$path];
 			} elseif ($config['authMethod'] == 'OAuthV2') {
-				$uri = $config['scheme'] . $config['host'] . $config[$path];
+				$uri = $config['scheme'] . '://' . $config['host'] . '/' . $config[$path];
 				$query = array('redirect_uri' => $config['callback'], 'client_id' => $config['login']);
 				if (!empty($config['scope'])) {
 					$query['scope'] = $config['scope'];
