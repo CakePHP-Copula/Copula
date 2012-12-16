@@ -1,11 +1,12 @@
 <?php
+App::uses('ApisAppModel', 'Apis.Model');
 
 class TokenSource extends ApisAppModel {
 
 	public $findMethods = array('request' => true, 'access' => true);
 	public $useTable = false;
 
-	function buildQuery($type = 'access', $query = array()) {
+	public function buildQuery($type = 'access', $query = array()) {
 		$query = array_merge(array(
 			'options' => array(),
 			'api' => null,

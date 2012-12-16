@@ -5,11 +5,15 @@
  * @subpackage model
  * @package Apis
  */
-class TokenStoreDb extends ApisAppModel {
+App::uses('TokenStoreInterface', 'Apis.Lib');
+App::uses('ApisAppModel', 'Apis.Model');
+App::uses('TokenStoreBehavior', 'Apis.Model/Behavior');
 
-	public $name = "TokenStore";
+class TokenStoreDb extends ApisAppModel implements TokenStoreInterface {
+
+	public $name = "TokenStoreDb";
 	public $useDbConfig = "default";
-	//public $actsAs = array('TokenStore');
+	public $actsAs = array('Apis.TokenStore');
 	public $useTable = "tokens";
 	var $validate = array(
 		'id' => array(),
@@ -42,8 +46,13 @@ class TokenStoreDb extends ApisAppModel {
 				'user_id' => $user_id,
 				'api' => $apiName
 				)));
-		$result = (empty($result)) ? $result : $result['Token'];
+		$result = (empty($result)) ? $result : $result[$this->alias];
 		return $result;
+	}
+
+	function checkToken($user_id, $apiName) {
+		$conditions = array('user_id' => $user_id, 'api' => $apiName);
+		return $this->hasAny($conditions);
 	}
 
 	/**
@@ -54,23 +63,20 @@ class TokenStoreDb extends ApisAppModel {
 	 * @param array $access_token
 	 * @param string $apiName
 	 */
-	function saveToken(array $access_token, $apiName, $user_id) {
-		if (!empty($access_token['oauth_token'])) {
-			$data = array('Token' => array(
-				'access_token' => $access_token['oauth_token'],
-				'token_secret' => $access_token['oauth_token_secret'],
-				'user_id' => $user_id,
-				'api' => $apiName
-			));
-		} else {
-			$data = array('Token' => array(
-					'user_id' => $user_id,
-				'access_token' => $access_token['access_token'],
-				'refresh_token' => $access_token['refresh_token'],
-					'api' => $apiName
-					));
+	function saveToken(array $access_token, $apiName, $user_id, $version) {
+		$this->data = array(
+			'user_id' => $user_id,
+			'api' => $apiName
+		);
+		if ($version == 'OAuth' || $version == '1.0') {
+			$this->data['access_token'] = $access_token['oauth_token'];
+			$this->data['token_secret'] = $access_token['oauth_token_secret'];
+		} elseif ($version == 'OAuthV2' || $version == '2.0') {
+			$this->data['access_token'] = $access_token['access_token'];
+			$this->data['refresh_token'] = $access_token['refresh_token'];
+			$this->data['expires'] = $access_token['expires'];
 		}
-		return $this->save($data);
+		return $this->save($this->data);
 	}
 
 	/**
@@ -82,13 +88,13 @@ class TokenStoreDb extends ApisAppModel {
 		if (!$this->isUnique(array('api', 'user_id'), false)) {
 			$existing = $this->find('all', array(
 				'conditions' => array(
-					'user_id' => $this->data['Token']['user_id'],
-					'api' => $this->data['Token']['api']
+					'user_id' => $this->data[$this->alias]['user_id'],
+					'api' => $this->data[$this->alias]['api']
 				),
 				'callbacks' => 'before'
 					));
-			if (!empty($existing[0]['Token'])) {
-				$this->id = $existing[0]['Token']['id'];
+			if (!empty($existing[0][$this->alias])) {
+				$this->id = $existing[0][$this->alias]['id'];
 			}
 		}
 		return true;

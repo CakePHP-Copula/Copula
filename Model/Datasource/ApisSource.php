@@ -9,9 +9,8 @@
  * @author Dean Sofer
  * */
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+App::uses('HttpSocketOauth', 'Apis.Lib');
 App::uses('HttpSocket', 'Network/Http');
-App::uses('OauthConfig', 'Apis.Lib');
 
 class ApisSource extends DataSource {
 
@@ -60,7 +59,7 @@ class ApisSource extends DataSource {
 
 	/**
 	 * Stores mapping of db actions to http methods
-	 * @var type 
+	 * @var type
 	 */
 	public $restMap = array(
 		'create' => 'POST',
@@ -91,7 +90,7 @@ class ApisSource extends DataSource {
 	}*/
 
 	/**
-	 * 
+	 *
 	 * @param string|array $url url or array of config options
 	 * @return \HttpSocketOauth|\HttpSocket
 	 */
@@ -109,7 +108,7 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param \Model $model
 	 * @return mixed
 	 */
@@ -118,7 +117,7 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param string|array $query array of params to be converted
 	 * @param boolean $escape whether to escape the separator
 	 * @return string string containing query
@@ -144,7 +143,7 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $data
 	 * @return null
 	 */
@@ -190,7 +189,7 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $query
 	 * @param \HttpSocketResponse $response
 	 * @return void
@@ -213,12 +212,11 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $method
 	 * @return array
 	 */
 	protected function _getAuth($method, $apiName) {
-		$token = OauthConfig::getAccessToken($apiName);
 		switch ($method) {
 			case 'Basic':
 
@@ -234,8 +232,8 @@ class ApisSource extends DataSource {
 					'oauth_consumer_key' => $this->config['login'],
 					'oauth_consumer_secret' => $this->config['password']
 						,);
-				$auth['oauth_token'] = (!empty($token['access_token'])) ? $token['access_token'] : null;
-				$auth['oauth_token_secret'] = (!empty($token['token_secret'])) ? $token['token_secret'] : null;
+				$auth['oauth_token'] = (!empty($this->config['access_token'])) ? $this->config['access_token'] : null;
+				$auth['oauth_token_secret'] = (!empty($this->config['token_secret'])) ? $this->config['token_secret'] : null;
 				break;
 			case 'OAuthV2':
 				$auth = array(
@@ -244,7 +242,7 @@ class ApisSource extends DataSource {
 					'client_id' => $this->config['login'],
 					'client_secret' => $this->config['password']
 				);
-				$auth['access_token'] = (isset($token['access_token'])) ? $token['access_token'] : null;
+				$auth['access_token'] = (isset($this->config['access_token'])) ? $this->config['access_token'] : null;
 				break;
 			default:
 				$auth = null;
@@ -274,7 +272,7 @@ class ApisSource extends DataSource {
 				$response = Xml::toArray($Xml);
 				//one of the two lines of code following is unecessary.
 				//Unset will delete the reference and mark the memory for garbage collection.
-				//setting null will clear the memory immediately. 
+				//setting null will clear the memory immediately.
 				//There is some overhead involved in shrinking the stack, so if you are calling this repeatedly it may not be faster.
 				$Xml = null;
 				unset($Xml);

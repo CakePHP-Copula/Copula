@@ -1,8 +1,7 @@
 <?php
 
-CakePlugin::load('HttpSocketOauth');
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+App::uses('HttpSocketOauth', 'Apis.Lib');
 
 class RemoteTokenSource extends DataSource {
 
@@ -17,7 +16,7 @@ class RemoteTokenSource extends DataSource {
 	public function read(\Model $model, array $queryData) {
 		$request = $this->{'_' . $model->findQueryType . $this->config['authMethod']}($queryData);
 		if (!empty($queryData['options'])) {
-			$request = array_merge($request, $queryData['options']);
+			$request = Hash::merge($request, $queryData['options']);
 		}
 		$response = $this->Http->request($request);
 		if ($response->isOK()) {
@@ -45,11 +44,20 @@ class RemoteTokenSource extends DataSource {
 
 	protected function _accessOAuthV2($queryData) {
 		$request = $this->_getRequest('access', 'POST');
-		$request['body'] = array(
+		$body = array(
 			'client_id' => $request['auth']['client_id'],
-			'client_secret' => $request['auth']['client_secret'],
-			'code' => $queryData['requestToken']
+			'client_secret' => $request['auth']['client_secret']
 		);
+		if ($queryData['requestToken']['grantType'] == 'access') {
+			$body['grant_type'] = 'authorization_code';
+			$body['code'] = $queryData['requestToken']['code'];
+			$body = http_build_query($body);
+			$body .= "&redirect_uri=" . $this->config['callback'];
+		} elseif ($queryData['requestToken']['grantType'] == 'refresh') {
+			$body['grant_type'] = 'refresh_token';
+			$body['refresh_token'] = $queryData['requestToken']['code'];
+		}
+		$request['body'] = $body;
 		unset($request['auth']);
 		return $request;
 	}
@@ -71,7 +79,7 @@ class RemoteTokenSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return array
 	 */
 	protected function _getRequest($path, $method = 'GET') {

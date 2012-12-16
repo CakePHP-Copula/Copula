@@ -5,7 +5,7 @@ App::uses('Controller', 'Controller');
 App::uses('CakeRequest', 'Network');
 App::uses('CakeResponse', 'Network');
 App::uses('HttpSocketResponse', 'Network/Http');
-App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+App::uses('HttpSocketOauth', 'Apis.Lib');
 App::uses('ComponentCollection', 'Controller');
 App::uses('OauthComponent', 'Apis.Controller/Component');
 
@@ -44,6 +44,7 @@ class OauthComponentTest extends CakeTestCase {
 		$Response = new CakeResponse();
 		$collection = new ComponentCollection();
 		$this->controller = new TestController($Request, $Response);
+		$this->controller->Apis = array('testapi');
 		$this->controller->constructClasses();
 		$this->Oauth = new OauthComponent($collection);
 		ConnectionManager::create('testapi', array(
@@ -134,6 +135,7 @@ class OauthComponentTest extends CakeTestCase {
 	}
 
 	function testCallbackV2() {
+		CakeSession::delete('Oauth.redirect');
 		$this->controller->request->query = array('code' => 'tanstaafl');
 		$ds = ConnectionManager::getDataSource('testapiToken');
 		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
@@ -144,8 +146,14 @@ class OauthComponentTest extends CakeTestCase {
 		$ds->Http->expects($this->once())
 				->method('request')
 				->will($this->returnValue($response));
-		$this->Oauth->callback('testapi');
-		$this->assertEquals(array('access_token' => 'sayThe', 'refresh_token' => 'magicWord'), OauthConfig::getAccessToken('testapi'));
+		CakeSession::write('Auth.User.id', '42');
+		$token = $this->Oauth->callback('testapi');
+		$this->assertEquals(array(
+			'access_token' => 'sayThe',
+			'refresh_token' => 'magicWord',
+			'type' => 'bearer',
+			'expires' => '3600'), $token);
+		CakeSession::delete('Auth.User.id');
 	}
 
 	function testCallbackV1() {
@@ -165,11 +173,16 @@ class OauthComponentTest extends CakeTestCase {
 		$this->Oauth->Session->expects($this->once())
 				->method('read')
 				->will($this->returnValue($requestToken));
-		$this->Oauth->Session->expects($this->once())
+		$this->Oauth->Session->expects($this->any())
 				->method('check')
-				->will($this->returnValue(true));
+				->will($this->onConsecutiveCalls(true, false));
+		CakeSession::write('Auth.User.id', '42');
 		$token = $this->Oauth->callback('testapi');
-		$this->assertEquals($token,OauthConfig::getAccessToken('testapi'));
+		$expected = array(
+			'oauth_token' => 'abcdef',
+			'oauth_token_secret' => 'TheTruthIsOutThere');
+		$this->assertEquals($expected, $token);
+		CakeSession::delete('Auth.User.id');
 	}
 
 }

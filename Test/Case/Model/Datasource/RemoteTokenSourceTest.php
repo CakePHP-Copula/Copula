@@ -1,7 +1,7 @@
 <?php
 
 App::uses('RemoteTokenSource', 'Apis.Model/Datasource');
-App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+App::uses('HttpSocketOauth', 'Apis.Lib');
 App::uses('Model', 'Model');
 App::uses('HttpSocketResponse', 'Network/Http');
 
@@ -38,7 +38,7 @@ class RemoteTokenSourceTest extends CakeTestCase {
 	public function testOauthV2Access() {
 		ConnectionManager::getDataSource('testapi')->setConfig(array('authMethod' => 'OAuthV2'));
 		$this->Model->findQueryType = 'access';
-		$queryData = array('requestToken' => 'code!');
+		$queryData = array('requestToken' => array('code' => 'code!', 'grantType' => 'access'));
 		$request = array(
 			'method' => 'POST',
 			'uri' => array(
@@ -46,11 +46,7 @@ class RemoteTokenSourceTest extends CakeTestCase {
 				'path' => 'token',
 				'scheme' => 'https'
 			),
-			'body' => array(
-				'client_id' => 'login',
-				'client_secret' => 'password',
-				'code' => 'code!'
-			)
+			'body' => "client_id=login&client_secret=password&grant_type=authorization_code&code=code%21&redirect_uri=https://www.mysite.com/oauth2callback"
 		);
 		$response = new HttpSocketResponse();
 		$response->code = 200;

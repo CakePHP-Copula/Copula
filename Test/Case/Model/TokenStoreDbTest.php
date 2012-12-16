@@ -19,6 +19,7 @@ class TokenTestCase extends CakeTestCase {
 				'user_id' => '1',
 				'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 				'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
+				'expires' => '3600',
 				'modified' => '2012-11-07 23:10:18'
 		)));
 
@@ -36,8 +37,8 @@ class TokenTestCase extends CakeTestCase {
 	}
 
 	function testSaveTokenDb() {
-		$return = $this->Token->saveToken($this->results[0]['Token'], 'testapi', '12');
-		$this->assertTrue(!empty($return['Token']));
+		$return = $this->Token->saveToken($this->results[0][$this->Token->alias], 'testapi', '12', '2.0');
+		$this->assertTrue(!empty($return[$this->Token->alias]));
 	}
 
 	function testBeforeSave() {
