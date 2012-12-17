@@ -1,5 +1,7 @@
 <?php
 
+App::uses('AuthComponent', 'Controller/Component');
+
 class OAuthConsumerBehavior extends ModelBehavior {
 
 	public function setup(\Model $model, $config = array()) {
@@ -10,28 +12,31 @@ class OAuthConsumerBehavior extends ModelBehavior {
 		}
 		$this->config[$model->alias] = array_merge(
 				$this->config[$model->alias], (array) $config);
-
 		if ($this->config[$model->alias]['autoFetch'] === true) {
 			$this->authorize($model, AuthComponent::user('id'));
 		}
 	}
-/**
- *
- * @param \Model $model
- * @param string $userId
- * @param TokenStoreInterface $Store
- * @return boolean
- */
-	function authorize(\Model $model, $userId, TokenStoreInterface $Store = null) {
+
+	/**
+	 *
+	 * @param \Model $model
+	 * @param string $userId
+	 * @param TokenStoreInterface $Store
+	 * @return boolean
+	 */
+	function authorize(\Model $model, $userId, TokenStoreInterface $Store = null, $apiName = null) {
 		if (empty($Store)) {
 			$Store = ClassRegistry::init('Apis.TokenStoreDb');
 		}
-		$token = $Store->getToken($userId, $model->useDbConfig);
+		if (empty($apiName)) {
+			$apiName = $model->useDbConfig;
+		}
+		$token = $Store->getToken($userId, $apiName);
 		if (!empty($token)) {
 			$model->getDataSource()->setConfig($token);
 			return TRUE;
 		} else {
-			return FALSE;
+			throw new CakeException(__('Could not get access token for Api %s', $model->useDbConfig));
 		}
 	}
 
@@ -64,4 +69,5 @@ class OAuthConsumerBehavior extends ModelBehavior {
 	}
 
 }
+
 ?>

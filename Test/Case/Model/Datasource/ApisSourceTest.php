@@ -4,6 +4,7 @@ App::uses('ApisSource', 'Apis.Model/Datasource');
 App::uses('AppModel', 'Model');
 App::uses('PhpReader', 'Configure');
 App::uses('HttpSocketResponse', 'Network/Http');
+App::uses('HttpSocket', 'Network/Http');
 App::uses('OauthConfig', 'Apis.Lib');
 
 class ApisTestModel extends AppModel {
@@ -110,19 +111,19 @@ class ApisSourceTest extends CakeTestCase {
 
 	function testLogQuery() {
 		$t = microtime(true);
-		$response = new HttpSocketResponse();
-		$response->raw = "This is a string to be logged";
-		$this->model->request = array();
-		$this->model->request['raw'] = "This is another string";
+		$Socket = new HttpSocketOauth();
+		$Socket->request['raw'] = 'This is another string';
+		$Socket->response = new HttpSocketResponse();
+		$Socket->response->raw = "This is a string to be logged";
 		Configure::write('debug', '1');
 		$this->Apis->took = round((microtime(true) - $t) * 1000, 0);
-		$this->Apis->logQuery($this->model, $response);
+		$this->Apis->logQuery($Socket);
 		$log = $this->Apis->getLog(false);
-		$this->assertEquals($this->model->request['raw'], $log['log'][0]['query']);
-		$this->assertEquals($response->raw, $log['log'][0]['response']);
+		$this->assertEquals($Socket->request['raw'], $log['log'][0]['query']);
+		$this->assertEquals($Socket->response->raw, $log['log'][0]['response']);
 		$this->assertEquals($this->Apis->took, $log['log'][0]['took']);
-		$this->model->request['raw'] .= str_repeat('abcdef', 1000);
-		$this->Apis->logQuery($this->model, $response);
+		$Socket->request['raw'] .= str_repeat('abcdef', 1000);
+		$this->Apis->logQuery($Socket);
 		$log2 = $this->Apis->getLog(false);
 		$this->assertTrue((substr($log2['log'][0]['query'], '-20')) == '[ ... truncated ...]');
 	}

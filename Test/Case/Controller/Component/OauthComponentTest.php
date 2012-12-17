@@ -36,7 +36,7 @@ class TestController extends Controller {
  */
 class OauthComponentTest extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.token');
+	var $fixtures = array('plugin.apis.tokenstoredb');
 
 	function setUp() {
 		parent::setUp();

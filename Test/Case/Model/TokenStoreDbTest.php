@@ -11,7 +11,7 @@ App::uses('HttpSocket', 'Network/Http');
  */
 class TokenTestCase extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.token');
+	var $fixtures = array('plugin.apis.tokenstoredb');
 	var $results = array(array(
 			'TokenStoreDb' => array(
 				'id' => '4',
