@@ -3,6 +3,7 @@
 App::uses('TokenSource', 'Apis.Model');
 App::uses('TokenStoreDb', 'Apis.Model');
 App::uses('OauthConfig', 'Apis.Lib');
+App::uses('CakeSession', 'Model/Datasource');
 
 /**
  * @property SessionComponent $Session
@@ -19,19 +20,33 @@ class OauthComponent extends Component {
 		parent::__construct($collection, $settings);
 	}
 
-	function initialize(\Controller $controller) {
-		$this->controller = $controller;
-		$this->Apis = $this->controller->Apis;
+	function beforeRedirect(\Controller $controller, $url, $status = null, $exit = true) {
+		$failed = $this->_checkAuthFailure($controller);
+		if (!empty($failed)) {
+			return false;
+		}
 	}
 
-	function beforeFilter() {
-		if (!$this->Auth->isAuthorized() && !empty($this->Apis)) {
-			foreach ($this->Apis as $apiName) {
-				if (!$apiName['authorized']) {
-					$this->Session->write('Oauth.redirect', $this->controller->request->here);
-					$this->connect($apiName);
+	function startup(\Controller $controller) {
+		$this->controller = $controller;
+		$failed = $this->_checkAuthFailure($controller);
+		if (!empty($failed)) {
+			CakeSession::write('Oauth.redirect', $controller->request->here);
+			$apiName = array_pop($failed);
+			unset($this->controller->Apis[$apiName]['authorized']);
+			return $this->connect($apiName);
+		}
+	}
+
+	protected function _checkAuthFailure(Controller $controller) {
+		if (!empty($controller->Apis)) {
+			$failed = array();
+			foreach ($controller->Apis as $apiName => $config) {
+				if (isset($config['authorized']) && !$config['authorized']) {
+					$failed[] = $apiName;
 				}
 			}
+			return $failed;
 		}
 	}
 
@@ -53,7 +68,11 @@ class OauthComponent extends Component {
 	 * @param array $requestOptions
 	 */
 	public function authorizeV2($apiName, $requestOptions = array()) {
-		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize', $requestOptions);
+		$options = array_merge(array(
+			'response_type' => 'code',
+			'access_type' => 'offline',
+				), $requestOptions);
+		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize', $options);
 		$this->controller->redirect($uri);
 	}
 
@@ -131,37 +150,38 @@ class OauthComponent extends Component {
 	 * @throws CakeException
 	 */
 	function callback($apiName) {
+		xdebug_break();
 		$method = OauthConfig::isOauthApi($apiName . 'Token');
 		if ($method == 'OAuthV2') {
-			if (empty($this->controller->request->query['code'])) {
+			$code = $this->controller->request->query('code');
+			if (empty($code)) {
 				throw new CakeException(__('Authorization token for API %s not received.', $apiName));
 			}
-			$oAuthCode = $this->controller->request->query['code'];
-			$accessToken = $this->getAccessTokenV2($apiName, $oAuthCode);
+			$accessToken = $this->getAccessTokenV2($apiName, $code);
 			if (!empty($accessToken)) {
 				return $this->_afterRequest($accessToken, $apiName, $method);
 			} else {
 				throw new CakeException(__('Could not get OAuthV2 Access Token from %s', $apiName));
 			}
 		} elseif ($method == 'OAuth') {
-			if (empty($this->controller->request->query['oauth_verifier'])) {
+			$verifier = $this->controller->request->query('oauth_verifier');
+			if (empty($verifier)) {
 				throw new CakeException(__('Oauth verification code for API %s not found.', $apiName));
 			}
 			if (!$this->Session->check("Oauth.$apiName.request_token")) {
 				throw new CakeException(__('Request token for API %s not found in Session.', $apiName));
 			}
 			$auth = array(
-				'oauth_verifier' => $this->controller->request->query['oauth_verifier']
+				'oauth_verifier' => $verifier
 			);
 			$authVars = array_merge($auth, $this->Session->read("Oauth.$apiName.request_token"));
 			$accessToken = $this->getAccessToken($apiName, $authVars);
 			if ($accessToken) {
 				return $this->_afterRequest($accessToken, $apiName, $method);
-				}
-			} else {
-				throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
 			}
-
+		} else {
+			throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
+		}
 	}
 
 	protected function _afterRequest(array $accessToken, $apiName, $version) {
