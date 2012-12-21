@@ -50,7 +50,7 @@ class RemoteTokenSourceTest extends CakeTestCase {
 		);
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$expected = array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires' => '3600');
+		$expected = array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires_in' => '3600');
 		$response->body = json_encode($expected);
 		$response->headers['Content-Type'] = 'application/json; charset utf-8';
 		$this->Source->Http->expects($this->once())

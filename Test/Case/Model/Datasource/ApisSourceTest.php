@@ -11,7 +11,7 @@ class ApisTestModel extends AppModel {
 
 	var $useDbConfig = "testapi";
 	var $useTable = 'section';
-	protected $_schema = array(
+	var $schema = array(
 		'id' => array(
 			'type' => 'integer',
 			'null' => false,
@@ -101,7 +101,7 @@ class ApisSourceTest extends CakeTestCase {
 
 	function testDescribe() {
 		$results = $this->Apis->describe($this->model);
-		$this->assertEquals($this->model->_schema, $results);
+		$this->assertEquals($this->model->schema, $results);
 	}
 
 	function testBeforeRequest() {

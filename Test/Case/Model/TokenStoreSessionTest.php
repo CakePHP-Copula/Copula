@@ -21,7 +21,7 @@ class TokenStoreSessionTest extends CakeTestCase {
 		'user_id' => '42',
 		'access_token' => 'canHas',
 		'refresh_token' => 'canHasRefresh',
-		'expires' => '3600'
+		'expires_in' => '3600'
 	);
 
 	public function setUp() {
@@ -51,7 +51,7 @@ class TokenStoreSessionTest extends CakeTestCase {
 		$testapi->Http = $this->getMock('HttpSocketOauth');
 		$refresh = new HttpSocketResponse();
 		$refresh->code = 200;
-		$body = array('access_token' => 'token', 'refresh_token' => 'refresh', 'expires' => '1234');
+		$body = array('access_token' => 'token', 'refresh_token' => 'refresh', 'expires_in' => '1234');
 		$refresh->body = json_encode($body);
 		$refresh->headers['Content-Type'] = 'application/json';
 		$request = array(

@@ -70,6 +70,7 @@ class OauthComponentTest extends CakeTestCase {
 		$ds = ConnectionManager::getDataSource('testapiToken');
 		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
 		$this->Oauth->initialize($this->controller);
+		$this->Oauth->startup($this->controller);
 	}
 
 	function tearDown() {
@@ -92,7 +93,7 @@ class OauthComponentTest extends CakeTestCase {
 
 	function testAuthorizeV2() {
 		$this->Oauth->authorizeV2('testapi');
-		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F";
+		$expected = 'https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline';
 		$this->assertEquals($expected, $this->controller->redirect);
 	}
 
@@ -116,7 +117,7 @@ class OauthComponentTest extends CakeTestCase {
 
 	function testConnectV2() {
 		$this->Oauth->connect('testapi');
-		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F";
+		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline";
 		$this->assertEquals($expected, $this->controller->redirect);
 	}
 
@@ -141,7 +142,7 @@ class OauthComponentTest extends CakeTestCase {
 		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
 		$response = new HttpSocketResponse();
 		$response->code = 200;
-		$response->body = json_encode(array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires' => '3600'));
+		$response->body = json_encode(array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires_in' => '3600'));
 		$response->headers['Content-Type'] = 'application/json; charset utf-8';
 		$ds->Http->expects($this->once())
 				->method('request')
@@ -152,7 +153,7 @@ class OauthComponentTest extends CakeTestCase {
 			'access_token' => 'sayThe',
 			'refresh_token' => 'magicWord',
 			'type' => 'bearer',
-			'expires' => '3600'), $token);
+			'expires_in' => '3600'), $token);
 		CakeSession::delete('Auth.User.id');
 	}
 

@@ -33,7 +33,7 @@ class OAuthConsumerBehavior extends ModelBehavior {
 		}
 		$token = $Store->getToken($userId, $apiName);
 		if (!empty($token)) {
-			$model->getDataSource()->setConfig($token);
+			ConnectionManager::getDataSource($model->useDbConfig)->setConfig($token);
 			return TRUE;
 		} else {
 			throw new CakeException(__('Could not get access token for Api %s', $model->useDbConfig));

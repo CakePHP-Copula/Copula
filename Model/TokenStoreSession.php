@@ -37,7 +37,7 @@ class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
 		} elseif ($version == 'OAuthV2' || $version == '2.0') {
 			$data['access_token'] = $access_token['access_token'];
 			$data['refresh_token'] = $access_token['refresh_token'];
-			$data['expires'] = $access_token['expires'];
+			$data['expires_in'] = $access_token['expires_in'];
 		}
 		$this->set($data);
 		if ($this->validates()) {
@@ -50,7 +50,7 @@ class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
 
 	public function getToken($userId, $apiName) {
 		$token = CakeSession::read("Apis.$apiName.$userId");
-		if (!empty($token['expires']) && $this->isExpired($token)) {
+		if (!empty($token['expires_in']) && $this->isExpired($token)) {
 			$refresh = $this->getRefreshAccess($token);
 			if (!empty($refresh)) {
 				$token = array_merge($token, $refresh);

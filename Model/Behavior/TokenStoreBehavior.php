@@ -44,7 +44,7 @@ class TokenStoreBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function isExpired(\Model $model, $token) {
-		$expires = $token['expires'];
+		$expires = $token['expires_in'];
 		$now = strtotime('now');
 		$modified = strtotime($token['modified']);
 		$interval = $now - $modified;
@@ -62,13 +62,14 @@ class TokenStoreBehavior extends ModelBehavior {
 	public function afterFind(\Model $model, $results, $primary) {
 		if ($primary &&
 				!empty($results[0][$model->alias]['access_token']) &&
-				!empty($results[0][$model->alias]['expires'])) {
+				!empty($results[0][$model->alias]['expires_in'])) {
 			$token = $results[0][$model->alias];
 			if ($this->isExpired($model, $token)) {
 				$refresh = $this->getRefreshAccess($model, $token);
 				if (!empty($refresh)) {
-					$model->saveToken($refresh, $token['user_id'], $token['api']);
-					$results = array_merge($results[0][$model->alias], $refresh);
+					$token = array_merge($token, $refresh);
+					$model->saveToken($token, $token['user_id'], $token['api'], '2.0');
+					$results[0][$model->alias] = $token;
 				} else {
 					throw new CakeException(__('Expired token for Api %s could not be refreshed.', $token['api']));
 				}

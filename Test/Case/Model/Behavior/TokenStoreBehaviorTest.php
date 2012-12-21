@@ -23,11 +23,11 @@ class AccessTokenBehaviorTestCase extends CakeTestCase {
 	function testIsExpired() {
 		$newer = array(
 			'modified' => date('Y-m-d H:i:s', strtotime('-5 min')),
-			'expires' => '3600'
+			'expires_in' => '3600'
 		);
 		$older = array(
 			'modified' => '2012-11-07 23:10:18',
-			'expires' => '3600'
+			'expires_in' => '3600'
 		);
 		$this->assertTrue($this->Token->isExpired($this->Model, $older));
 		$this->assertFalse($this->Token->isExpired($this->Model, $newer));

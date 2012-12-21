@@ -27,7 +27,7 @@ class TokenstoredbFixture extends CakeTestFixture {
 			'type' => 'string',
 			'null' => false
 		),
-		'expires' => array('type' => 'string', 'null' => true),
+		'expires_in' => array('type' => 'string', 'null' => true),
 		'token_secret' => array('type' => 'string', 'null' => true)
 	);
 	var $records = array(
@@ -38,7 +38,7 @@ class TokenstoredbFixture extends CakeTestFixture {
 			'modified' => '2012-11-07 23:10:18',
 			'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
 			'api' => 'testapi',
-			'expires' => '3600',
+			'expires_in' => '3600',
 			'token_secret' => null
 		),
 		array(
@@ -49,19 +49,32 @@ class TokenstoredbFixture extends CakeTestFixture {
 			'token_secret' => 'Ed2PaR3eO_lo8qMDd0B9TK',
 			'api' => 'testapi',
 			'refresh_token' => null,
-			'expires' => null
+			'expires_in' => null
 		),
 		array(
 			'id' => '4',
-			'user_id' => '1',
+			'user_id' => '3',
 			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 			'modified' => '2012-11-07 23:10:18',
-			'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
+			'refresh_token' => '',
 			'api' => 'cloudprint',
-			'expires' => '3600',
+			'expires_in' => '3600',
 			'token_secret' => null
 		)
 	);
+
+	public function init() {
+		$this->records[] = array(
+			'id' => '5',
+			'user_id' => '6',
+			'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
+			'modified' => (string) date('Y-m-d H:i:s'),
+			'refresh_token' =>'',
+			'api' => 'cloudprint',
+			'expires_in' => '3600',
+			'token_secret' => null
+		);
+	}
 
 }
 

@@ -19,7 +19,7 @@ class TokenTestCase extends CakeTestCase {
 				'user_id' => '1',
 				'access_token' => 'ya29.AHES6ZTopEd2PaRCaLZDd0B9TKNqdt857DYrlC-Welo9d84LaElzAg',
 				'refresh_token' => '1/jr6xd0f83uXDh-sBE3eO_lo8qMr11pOQXalzfTAYXGk',
-				'expires' => '3600',
+				'expires_in' => '3600',
 				'modified' => '2012-11-07 23:10:18'
 		)));
 
@@ -29,10 +29,10 @@ class TokenTestCase extends CakeTestCase {
 	}
 
 	function testGetTokenDb() {
-		$token = $this->Token->getToken('1', 'testapi');
+		$token = $this->Token->getToken('6', 'cloudprint');
 		$this->assertTrue(!empty($token['access_token']));
 
-		$noToken = $this->Token->getToken('4', 'testapi');
+		$noToken = $this->Token->getToken('99', 'testapi');
 		$this->assertTrue(empty($noToken));
 	}
 

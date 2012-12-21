@@ -70,27 +70,6 @@ class ApisSource extends DataSource {
 
 	/**
 	 *
-	 * @param array $config
-	 */
-	/*public function __construct($config) {
-		// Store the API configuration map
-		list($plugin, $name) = pluginSplit($config['datasource'], true);
-		$name = str_replace('Source', '', $name);
-		$this->map = $this->_getPaths($name, $plugin);
-		parent::__construct($config);
-	}*/
-
-	/**
-	 * This function returns the REST paths for the datasource. Could be extended to use database or XML.
-	 * @param string $plugin
-	 * @return array
-	 */
-	/*protected function _getPaths($name, $plugin = null) {
-		return Configure::read('Apis.' . $name . '.path');
-	}*/
-
-	/**
-	 *
 	 * @param string|array $url url or array of config options
 	 * @return \HttpSocketOauth|\HttpSocket
 	 */
@@ -113,7 +92,16 @@ class ApisSource extends DataSource {
 	 * @return mixed
 	 */
 	public function describe(\Model $model) {
-		return $model->schema();
+		if (!empty($model->schema)) {
+			$schema = $model->schema;
+		} elseif (!empty($this->_schema)) {
+			$schema = $this->_schema;
+		} elseif (!empty($this->map)) {
+			$schema = $this->map;
+		} else {
+			return null;
+		}
+		return $schema;
 	}
 
 	/**
@@ -130,7 +118,9 @@ class ApisSource extends DataSource {
 	}
 
 	protected function _buildRequest($apiName, $type = 'read') {
-		$this->map = Configure::read("Apis.$apiName.path");
+		if (empty($this->map)) {
+			$this->map = Configure::read("Apis.$apiName.path");
+		}
 		$request = array();
 		$request['method'] = $this->restMap[$type];
 		$request['uri']['host'] = $this->map['host'];
@@ -148,7 +138,11 @@ class ApisSource extends DataSource {
 	 * @return null
 	 */
 	public function listSources($data = null) {
-		return null;
+		if (!empty($this->map->create)) {
+			return array_keys($this->map->create);
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -269,7 +263,7 @@ class ApisSource extends DataSource {
 			case 'application/rss+xml':
 				App::uses('Xml', 'Utility');
 				$Xml = Xml::build($response->body());
-				$response = Xml::toArray($Xml);
+				$return = Xml::toArray($Xml);
 				//one of the two lines of code following is unecessary.
 				//Unset will delete the reference and mark the memory for garbage collection.
 				//setting null will clear the memory immediately.
@@ -280,10 +274,13 @@ class ApisSource extends DataSource {
 			case 'application/json':
 			case 'application/javascript':
 			case 'text/javascript':
-				$response = json_decode($response->body(), true);
+				$return = json_decode($response->body(), true);
+				break;
+			default:
+				$return = $response->body();
 				break;
 		}
-		return $response;
+		return $return;
 	}
 
 	/**
@@ -366,7 +363,10 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
-		$queryData['conditions'] = (isset($queryData['conditions']))? $queryData['conditions'] : array();
+		if(empty($queryData['section'])){
+			$queryData['section'] = $model->useTable;
+		}
+		$queryData['conditions'] = (isset($queryData['conditions'])) ? $queryData['conditions'] : array();
 		$model->request = $this->_buildRequest($model->useDbConfig, 'read');
 		if (!empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
@@ -387,7 +387,7 @@ class ApisSource extends DataSource {
 	 * @param array $values Unused
 	 */
 	public function create(Model $model, $fields = null, $values = null) {
-		$model->request = $this->_buildRequest($model->useDbConfig,'create');
+		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
 		if ($scan) {
 			$model->request['uri']['path'] = $scan[0];
@@ -426,7 +426,7 @@ class ApisSource extends DataSource {
 	 * @param mixed $id Unused
 	 */
 	public function delete(Model $model, $id = null) {
-		$this->_buildRequest($model->useDbConfig,'delete');
+		$this->_buildRequest($model->useDbConfig, 'delete');
 		return $this->request($model);
 	}
 

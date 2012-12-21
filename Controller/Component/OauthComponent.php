@@ -150,7 +150,6 @@ class OauthComponent extends Component {
 	 * @throws CakeException
 	 */
 	function callback($apiName) {
-		xdebug_break();
 		$method = OauthConfig::isOauthApi($apiName . 'Token');
 		if ($method == 'OAuthV2') {
 			$code = $this->controller->request->query('code');

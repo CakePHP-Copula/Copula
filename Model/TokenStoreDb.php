@@ -74,7 +74,7 @@ class TokenStoreDb extends ApisAppModel implements TokenStoreInterface {
 		} elseif ($version == 'OAuthV2' || $version == '2.0') {
 			$this->data['access_token'] = $access_token['access_token'];
 			$this->data['refresh_token'] = $access_token['refresh_token'];
-			$this->data['expires'] = $access_token['expires'];
+			$this->data['expires_in'] = $access_token['expires_in'];
 		}
 		return $this->save($this->data);
 	}
