@@ -170,16 +170,14 @@ class OauthComponent extends Component {
 			if (!$this->Session->check("Oauth.$apiName.request_token")) {
 				throw new CakeException(__('Request token for API %s not found in Session.', $apiName));
 			}
-			$auth = array(
-				'oauth_verifier' => $verifier
-			);
+			$auth = array('oauth_verifier' => $verifier);
 			$authVars = array_merge($auth, $this->Session->read("Oauth.$apiName.request_token"));
 			$accessToken = $this->getAccessToken($apiName, $authVars);
-			if ($accessToken) {
+			if (!empty($accessToken)) {
 				return $this->_afterRequest($accessToken, $apiName, $method);
+			} else {
+				throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
 			}
-		} else {
-			throw new CakeException(__('Could not get OAuth Access Token from %s', $apiName));
 		}
 	}
 
@@ -192,6 +190,8 @@ class OauthComponent extends Component {
 			} else {
 				return $accessToken;
 			}
+		} else {
+			throw new CakeException(__('Could not store access token for API %s', $apiName));
 		}
 	}
 
