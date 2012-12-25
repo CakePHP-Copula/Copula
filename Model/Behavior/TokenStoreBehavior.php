@@ -4,7 +4,7 @@
  * Description of AccessToken
  *
  * @package cake
- * @subpackage apis
+ * @subpackage Copula
  */
 App::uses('ModelBehavior', 'Model');
 
@@ -20,7 +20,7 @@ class TokenStoreBehavior extends ModelBehavior {
 	 * @return void
 	 */
 	public function setup(\Model $Model, $config = array()) {
-		$this->TokenSource = ClassRegistry::init('Apis.TokenSource');
+		$this->TokenSource = ClassRegistry::init('Copula.TokenSource');
 	}
 
 	/**

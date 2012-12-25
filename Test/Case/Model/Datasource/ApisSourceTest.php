@@ -1,13 +1,13 @@
 <?php
 
-App::uses('ApisSource', 'Apis.Model/Datasource');
+App::uses('ApisSource', 'Copula.Model/Datasource');
 App::uses('AppModel', 'Model');
 App::uses('PhpReader', 'Configure');
 App::uses('HttpSocketResponse', 'Network/Http');
 App::uses('HttpSocket', 'Network/Http');
-App::uses('OauthConfig', 'Apis.Lib');
+App::uses('OauthConfig', 'Copula.Lib');
 
-class ApisTestModel extends AppModel {
+class CopulaTestModel extends AppModel {
 
 	var $useDbConfig = "testapi";
 	var $useTable = 'section';
@@ -38,7 +38,7 @@ class ApisTestModel extends AppModel {
 }
 
 /**
- * @property ApisTestModel $model
+ * @property CopulaTestModel $model
  * @property ApisSource $Apis
  */
 class ApisSourceTest extends CakeTestCase {
@@ -65,10 +65,11 @@ class ApisSourceTest extends CakeTestCase {
 		'callback' => 'https://www.test.com/oauth2callback'
 	);
 	var $dbconf = array(
-		'datasource' => 'Apis.ApisSource',
+		'datasource' => 'Copula.ApisSource',
 		'login' => 'login',
 		'password' => 'password',
-		'authMethod' => 'OAuthV2'
+		'authMethod' => 'OAuthV2',
+		'scheme' => 'https'
 	);
 	var $paths = array(
 		'host' => 'www.example.com',
@@ -93,10 +94,10 @@ class ApisSourceTest extends CakeTestCase {
 
 	public function setUp() {
 		parent::setUp();
-		Configure::write('Apis.testapi.path', $this->paths);
-		Configure::write('Apis.testapi.oauth', $this->config);
+		Configure::write('Copula.testapi.path', $this->paths);
+	//	Configure::write('Copula.testapi.oauth', $this->config);
 		$this->Apis = ConnectionManager::create('testapi', $this->dbconf);
-		$this->model = ClassRegistry::init('ApisTestModel');
+		$this->model = ClassRegistry::init('CopulaTestModel');
 	}
 
 	function testDescribe() {

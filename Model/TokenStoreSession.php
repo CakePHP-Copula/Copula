@@ -1,15 +1,15 @@
 <?php
 
-App::uses('TokenStoreInterface', 'Apis.Lib');
+App::uses('TokenStoreInterface', 'Copula.Lib');
 App::uses('CakeSession', 'Model/Datasource');
-App::uses('ApisAppModel', 'Apis.Model');
-App::uses('TokenStoreBehavior', 'Apis.Model/Behavior');
+App::uses('CopulaAppModel', 'Copula.Model');
+App::uses('TokenStoreBehavior', 'Copula.Model/Behavior');
 
-class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
+class TokenStoreSession extends CopulaAppModel implements TokenStoreInterface {
 
 	public $useTable = false;
 	public $table = false;
-	public $actsAs = array('Apis.TokenStore');
+	public $actsAs = array('Copula.TokenStore');
 	var $validate = array(
 		'id' => array(),
 		'user_id' => array(
@@ -41,7 +41,7 @@ class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
 		}
 		$this->set($data);
 		if ($this->validates()) {
-			CakeSession::write("Apis.$apiName.$userId", $data);
+			CakeSession::write("Copula.$apiName.$userId", $data);
 			return $this->data;
 		} else {
 			return false;
@@ -49,7 +49,7 @@ class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
 	}
 
 	public function getToken($userId, $apiName) {
-		$token = CakeSession::read("Apis.$apiName.$userId");
+		$token = CakeSession::read("Copula.$apiName.$userId");
 		if (!empty($token['expires_in']) && $this->isExpired($token)) {
 			$refresh = $this->getRefreshAccess($token);
 			if (!empty($refresh)) {
@@ -63,7 +63,7 @@ class TokenStoreSession extends ApisAppModel implements TokenStoreInterface {
 	}
 
 	public function checkToken($userId, $apiName) {
-		return CakeSession::check("Apis.$apiName.$userId");
+		return CakeSession::check("Copula.$apiName.$userId");
 	}
 
 }

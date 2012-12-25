@@ -1,7 +1,7 @@
 <?php
 
-App::uses('RemoteTokenSource', 'Apis.Model/Datasource');
-App::uses('HttpSocketOauth', 'Apis.Lib');
+App::uses('RemoteTokenSource', 'Copula.Model/Datasource');
+App::uses('HttpSocketOauth', 'Copula.Lib');
 App::uses('Model', 'Model');
 App::uses('HttpSocketResponse', 'Network/Http');
 
@@ -13,7 +13,7 @@ class RemoteTokenSourceTest extends CakeTestCase {
 	public function setUp() {
 		parent::setUp();
 		$config = array(
-			'datasource' => 'Apis.RemoteTokenSource',
+			'datasource' => 'Copula.RemoteTokenSource',
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuth',

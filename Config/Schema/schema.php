@@ -1,5 +1,5 @@
 <?php
-class ApiSchema extends CakeSchema {
+class CopulaSchema extends CakeSchema {
 
 	public function before($event = array()) {
 		return true;

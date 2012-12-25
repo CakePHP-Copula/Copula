@@ -1,7 +1,7 @@
 <?php
-App::uses('ApisAppModel', 'Apis.Model');
+App::uses('CopulaAppModel', 'Copula.Model');
 
-class TokenSource extends ApisAppModel {
+class TokenSource extends CopulaAppModel {
 
 	public $findMethods = array('request' => true, 'access' => true);
 	public $useTable = false;

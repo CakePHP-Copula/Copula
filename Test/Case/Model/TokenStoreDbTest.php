@@ -1,6 +1,6 @@
 <?php
 
-App::uses('TokenStoreDb', 'Apis.Model');
+App::uses('TokenStoreDb', 'Copula.Model');
 App::uses('HttpResponse', 'Network/Http');
 App::uses('HttpSocket', 'Network/Http');
 
@@ -11,7 +11,7 @@ App::uses('HttpSocket', 'Network/Http');
  */
 class TokenTestCase extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.tokenstoredb');
+	var $fixtures = array('plugin.copula.tokenstoredb');
 	var $results = array(array(
 			'TokenStoreDb' => array(
 				'id' => '4',
@@ -25,7 +25,7 @@ class TokenTestCase extends CakeTestCase {
 
 	function setUp() {
 		parent::setUp();
-		$this->Token = ClassRegistry::init('Apis.TokenStoreDb');
+		$this->Token = ClassRegistry::init('Copula.TokenStoreDb');
 	}
 
 	function testGetTokenDb() {

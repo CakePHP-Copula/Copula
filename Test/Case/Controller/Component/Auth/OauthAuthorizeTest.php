@@ -1,10 +1,10 @@
 <?php
 
-App::uses('OauthAuthorize', 'Apis.Controller/Component/Auth');
+App::uses('OauthAuthorize', 'Copula.Controller/Component/Auth');
 App::uses('CakeRequest', 'Network');
 App::uses('AuthComponent', 'Controller/Component');
-App::uses('TokenStoreDb', 'Apis.Model');
-App::uses('TokenStoreSession', 'Apis.Model');
+App::uses('TokenStoreDb', 'Copula.Model');
+App::uses('TokenStoreSession', 'Copula.Model');
 App::uses('Controller', 'Controller');
 
 class FakeController extends Controller{
@@ -15,7 +15,7 @@ class FakeController extends Controller{
  */
 class OauthAuthorizeTestCase extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.tokenstoredb');
+	var $fixtures = array('plugin.copula.tokenstoredb');
 
 	public function setUp() {
 		parent::setUp();
@@ -23,7 +23,7 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuthV2',
-			'datasource' => 'Apis.ApisSource'
+			'datasource' => 'Copula.ApisSource'
 		));
 		$this->request = new CakeRequest();
 		$this->controller = $this->getMock('FakeController');

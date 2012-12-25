@@ -1,7 +1,7 @@
 <?php
 
-App::uses('TokenStoreBehavior', 'Apis.Model/Behavior');
-App::uses('TokenSource', 'Apis.Model');
+App::uses('TokenStoreBehavior', 'Copula.Model/Behavior');
+App::uses('TokenSource', 'Copula.Model');
 App::uses('Model', 'Model');
 
 /**

@@ -26,7 +26,7 @@ class OAuthConsumerBehavior extends ModelBehavior {
 	 */
 	function authorize(\Model $model, $userId, TokenStoreInterface $Store = null, $apiName = null) {
 		if (empty($Store)) {
-			$Store = ClassRegistry::init('Apis.TokenStoreDb');
+			$Store = ClassRegistry::init('Copula.TokenStoreDb');
 		}
 		if (empty($apiName)) {
 			$apiName = $model->useDbConfig;
