@@ -1,7 +1,7 @@
 <?php
 
-App::uses('TokenSource', 'Apis.Model');
-App::uses('RemoteTokenSource', 'Apis.Model/Datasource');
+App::uses('TokenSource', 'Copula.Model');
+App::uses('RemoteTokenSource', 'Copula.Model/Datasource');
 
 class TokenSourceTest extends CakeTestCase {
 

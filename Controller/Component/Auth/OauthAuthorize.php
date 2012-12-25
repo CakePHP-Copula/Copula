@@ -1,8 +1,8 @@
 <?php
 
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
-App::uses('Token', 'Apis.Model');
-App::uses('OauthConfig', 'Apis.Lib');
+App::uses('Token', 'Copula.Model');
+App::uses('OauthConfig', 'Copula.Lib');
 
 /**
  * @property Token $Token
@@ -36,7 +36,7 @@ class OauthAuthorize extends BaseAuthorize {
 
 	protected function _getTokenStore($storeMethod) {
 		if (!isset($this->{'TokenStore' . $storeMethod})) {
-			$this->{'TokenStore' . $storeMethod} = ClassRegistry::init('Apis.TokenStore' . $storeMethod);
+			$this->{'TokenStore' . $storeMethod} = ClassRegistry::init('Copula.TokenStore' . $storeMethod);
 		}
 		return $this->{'TokenStore' . $storeMethod};
 	}

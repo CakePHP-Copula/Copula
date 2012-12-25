@@ -1,8 +1,8 @@
 <?php
 
 App::uses('CakeSession', 'Model/Datasource');
-App::uses('TokenStoreSession', 'Apis.Model');
-App::uses('HttpSocketOauth', 'Apis.Lib');
+App::uses('TokenStoreSession', 'Copula.Model');
+App::uses('HttpSocketOauth', 'Copula.Lib');
 App::uses('HttpSocketResponse', 'Network/Http');
 
 /**
@@ -26,19 +26,19 @@ class TokenStoreSessionTest extends CakeTestCase {
 
 	public function setUp() {
 		parent::setUp();
-		$this->Token = ClassRegistry::init('Apis.TokenStoreSession');
+		$this->Token = ClassRegistry::init('Copula.TokenStoreSession');
 	}
 
 	public function testGetToken() {
 		$token = $this->tokenV2;
 		$token['modified'] = date('Y-m-d H:i:s');
-		CakeSession::write('Apis.testapi.42', $token);
+		CakeSession::write('Copula.testapi.42', $token);
 		$this->assertEquals($token, $this->Token->getToken('42', 'testapi'));
 	}
 
 	public function testGetTokenRefresh() {
 		$config = array(
-			'datasource' => 'Apis.RemoteTokenSource',
+			'datasource' => 'Copula.RemoteTokenSource',
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuthV2',
@@ -73,7 +73,7 @@ class TokenStoreSessionTest extends CakeTestCase {
 				->will($this->returnValueMap(array(array($request, $refresh))));
 		$token = $this->tokenV2;
 		$token['modified'] = '1970-01-01 00:00:00';
-		CakeSession::write('Apis.testapi.42', $token);
+		CakeSession::write('Copula.testapi.42', $token);
 		$result = $this->Token->getToken('42', 'testapi');
 		$expected = array_merge($token, $body);
 		$this->assertEquals($expected, $result);

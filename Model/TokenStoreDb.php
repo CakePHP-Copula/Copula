@@ -3,17 +3,17 @@
 /**
  *
  * @subpackage model
- * @package Apis
+ * @package Copula
  */
-App::uses('TokenStoreInterface', 'Apis.Lib');
-App::uses('ApisAppModel', 'Apis.Model');
-App::uses('TokenStoreBehavior', 'Apis.Model/Behavior');
+App::uses('TokenStoreInterface', 'Copula.Lib');
+App::uses('CopulaAppModel', 'Copula.Model');
+App::uses('TokenStoreBehavior', 'Copula.Model/Behavior');
 
-class TokenStoreDb extends ApisAppModel implements TokenStoreInterface {
+class TokenStoreDb extends CopulaAppModel implements TokenStoreInterface {
 
 	public $name = "TokenStoreDb";
 	public $useDbConfig = "default";
-	public $actsAs = array('Apis.TokenStore');
+	public $actsAs = array('Copula.TokenStore');
 	public $useTable = "tokens";
 	var $validate = array(
 		'id' => array(),

@@ -1,13 +1,13 @@
 <?php
 
-App::uses('TokenStoreInterface', 'Apis.Lib');
-App::uses('ApisAppModel', 'Apis.Model');
-App::uses('TokenStoreBehavior', 'Apis.Model/Behavior');
+App::uses('TokenStoreInterface', 'Copula.Lib');
+App::uses('CopulaAppModel', 'Copula.Model');
+App::uses('TokenStoreBehavior', 'Copula.Model/Behavior');
 
-class TokenStoreCookie extends ApisAppModel implements TokenStoreInterface {
+class TokenStoreCookie extends CopulaAppModel implements TokenStoreInterface {
 
 	public $useTable = false;
-	public $actsAs = array('Apis.TokenStore');
+	public $actsAs = array('Copula.TokenStore');
 	var $validate = array(
 		'id' => array(),
 		'user_id' => array(

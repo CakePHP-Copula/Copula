@@ -9,7 +9,7 @@
  * @author Dean Sofer
  * */
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'Apis.Lib');
+App::uses('HttpSocketOauth', 'Copula.Lib');
 App::uses('HttpSocket', 'Network/Http');
 
 class ApisSource extends DataSource {
@@ -119,15 +119,15 @@ class ApisSource extends DataSource {
 
 	protected function _buildRequest($apiName, $type = 'read') {
 		if (empty($this->map)) {
-			$this->map = Configure::read("Apis.$apiName.path");
+			$this->map = Configure::read("Copula.$apiName.path");
 		}
 		$request = array();
 		$request['method'] = $this->restMap[$type];
 		$request['uri']['host'] = $this->map['host'];
 		$request['auth'] = $this->_getAuth($this->config['authMethod'], $apiName);
-		$scheme = Configure::read("Apis.$apiName.oauth.scheme");
-		if (!empty($scheme)) {
-			$request['uri']['scheme'] = $scheme;
+		//$scheme = Configure::read("Copula.$apiName.oauth.scheme");
+		if (!empty($this->config['scheme'])) {
+			$request['uri']['scheme'] = $this->config['scheme'];
 		}
 		return $request;
 	}
@@ -306,7 +306,7 @@ class ApisSource extends DataSource {
 	 */
 	protected function _scanMap($action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
-			throw new CakeException(__('Section %s not found in Apis Driver Configuration Map - ', $section) . get_class($this), 500);
+			throw new CakeException(__('Section %s not found in Copula Driver Configuration Map - ', $section) . get_class($this), 500);
 		}
 		$map = $this->map[$action][$section];
 		foreach ($map as $path => $conditions) {

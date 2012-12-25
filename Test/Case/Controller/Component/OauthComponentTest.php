@@ -5,9 +5,9 @@ App::uses('Controller', 'Controller');
 App::uses('CakeRequest', 'Network');
 App::uses('CakeResponse', 'Network');
 App::uses('HttpSocketResponse', 'Network/Http');
-App::uses('HttpSocketOauth', 'Apis.Lib');
+App::uses('HttpSocketOauth', 'Copula.Lib');
 App::uses('ComponentCollection', 'Controller');
-App::uses('OauthComponent', 'Apis.Controller/Component');
+App::uses('OauthComponent', 'Copula.Controller/Component');
 
 class TestController extends Controller {
 
@@ -36,7 +36,7 @@ class TestController extends Controller {
  */
 class OauthComponentTest extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.tokenstoredb');
+	var $fixtures = array('plugin.copula.tokenstoredb');
 
 	function setUp() {
 		parent::setUp();
@@ -48,7 +48,7 @@ class OauthComponentTest extends CakeTestCase {
 		$this->controller->constructClasses();
 		$this->Oauth = new OauthComponent($collection);
 		ConnectionManager::create('testapi', array(
-			'datasource' => 'Apis.ApisSource',
+			'datasource' => 'Copula.ApisSource',
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuthV2',
@@ -56,7 +56,7 @@ class OauthComponentTest extends CakeTestCase {
 			'host' => 'www.example.com/api'
 		));
 		ConnectionManager::create('testapiToken', array(
-			'datasource' => 'Apis.RemoteTokenSource',
+			'datasource' => 'Copula.RemoteTokenSource',
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuthV2',

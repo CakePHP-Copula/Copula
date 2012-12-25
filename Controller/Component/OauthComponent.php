@@ -1,8 +1,8 @@
 <?php
 
-App::uses('TokenSource', 'Apis.Model');
-App::uses('TokenStoreDb', 'Apis.Model');
-App::uses('OauthConfig', 'Apis.Lib');
+App::uses('TokenSource', 'Copula.Model');
+App::uses('TokenStoreDb', 'Copula.Model');
+App::uses('OauthConfig', 'Copula.Lib');
 App::uses('CakeSession', 'Model/Datasource');
 
 /**
@@ -16,7 +16,7 @@ class OauthComponent extends Component {
 	public $controller;
 
 	function __construct(\ComponentCollection $collection, $settings = array()) {
-		$this->TokenSource = ClassRegistry::init('Apis.TokenSource');
+		$this->TokenSource = ClassRegistry::init('Copula.TokenSource');
 		parent::__construct($collection, $settings);
 	}
 
@@ -203,7 +203,7 @@ class OauthComponent extends Component {
 	 */
 	public function store(array $accessToken, $apiName, $version) {
 		$storageMethod = (empty($this->controller->Apis[$apiName]['store'])) ? 'Db' : ucfirst($this->controller->Apis[$apiName]['store']);
-		$Store = ClassRegistry::init('Apis.TokenStore' . $storageMethod);
+		$Store = ClassRegistry::init('Copula.TokenStore' . $storageMethod);
 		if ($Store instanceof TokenStoreInterface) {
 			return $Store->saveToken($accessToken, $apiName, AuthComponent::user('id'), $version);
 		} else {
