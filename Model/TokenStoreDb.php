@@ -19,8 +19,8 @@ class TokenStoreDb extends ApisAppModel implements TokenStoreInterface {
 		'id' => array(),
 		'user_id' => array(
 			'numeric' => array(
-				'rule' => 'numeric',
-				'message' => 'user_id must be numeric'
+				'rule' => 'notEmpty',
+				'message' => 'user_id must be setted'
 			),
 			'unique' => array(
 				'rule' => 'isUnique',
