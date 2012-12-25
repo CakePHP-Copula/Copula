@@ -172,12 +172,7 @@ class ApisSource extends DataSource {
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 		$this->logQuery($Http);
 
-		$model->response = $this->decode($Http->response);
-
-		if (!$Http->response->isOk()) {
-			$model->onError();
-			return false;
-		}
+		$model->response = $this->afterRequest($model, $Http->response);
 
 		return $model->response;
 	}
@@ -350,6 +345,15 @@ class ApisSource extends DataSource {
 		return $model->request;
 	}
 
+	public function afterRequest(Model &$model, HttpSocketResponse &$response) {
+		if (!$response->isOk()) {
+			$model->onError();
+			return false;
+		} else {
+			return $this->decode($response);
+		}
+	}
+
 	/**
 	 * Uses standard find conditions. Use find('all', $params). Since you cannot pull specific fields,
 	 * we will instead use 'fields' to specify what table to pull from.
@@ -363,7 +367,7 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
-		if(empty($queryData['section'])){
+		if (empty($queryData['section'])) {
 			$queryData['section'] = $model->useTable;
 		}
 		$queryData['conditions'] = (isset($queryData['conditions'])) ? $queryData['conditions'] : array();
