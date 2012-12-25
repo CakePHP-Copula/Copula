@@ -15,25 +15,30 @@ class TokenStoreDb extends ApisAppModel implements TokenStoreInterface {
 	public $useDbConfig = "default";
 	public $actsAs = array('Apis.TokenStore');
 	public $useTable = "tokens";
-	var $validate = array(
-		'id' => array(),
-		'user_id' => array(
-			'numeric' => array(
-				'rule' => 'notEmpty',
-				'message' => 'user_id must be setted'
-			),
-			'unique' => array(
-				'rule' => 'isUnique',
-				'message' => 'user_id must be unique'
-			)
-		),
-		'api' => array(
-			'alphaNumeric' => array(
-				'rule' => 'alphaNumeric',
-				'message' => 'API names must be alphanumeric. In point of fact they should probably be camelcased singular.'
-			)
-		)
-	);
+	public $validate = array();
+        
+        public function __construct($id = false, $table = null, $ds = null) {
+                $this->validate = array(
+                        'id' => array(),
+                        'user_id' => array(
+                                'numeric' => array(
+                                        'rule' => 'notEmpty',
+                                        'message' => __('user_id must be setted')
+                                ),
+                                'unique' => array(
+                                        'rule' => 'isUnique',
+                                        'message' => __('user_id must be unique')
+                                )
+                        ),
+                        'api' => array(
+                                'alphaNumeric' => array(
+                                        'rule' => 'alphaNumeric',
+                                        'message' => __('API names must be alphanumeric. In point of fact they should probably be camelcased singular.')
+                                )
+                        )                
+                );
+                parent::__construct($id, $table, $ds);
+        }
 
 	/**
 	 * @param string $user_id  the associated user id
