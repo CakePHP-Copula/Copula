@@ -88,6 +88,8 @@ The second configuration block is used to retrieve access and request tokens fro
 <dd>This must equal the <code>consumer_secret</code> (OAuth) or <code>client_secret</code> (OAuth 2.0)</dd>
 <dt><b><code>authMethod</code></b></dt>
 <dd>This must equal either <code>'OAuth'</code> or <code>'OAuthV2'</code>. Those are the only allowed values.</dd>
+<dt><b><code>scheme</code></b></dt>
+<dd>Valid values: <code>'http'</code> or <code>'https'</code>. Many, if not most, APIs prefer you to use HTTPS.</dd>
 </dl>
 
 Also common to both configurations is the `'datasource'` key, which is required by CakePHP. By default the API datasource should be set to `'Copula.ApisSource'` and the Token datasource should be set to `'Copula.RemoteTokenSource'`. You may use any value for this key provided that the referenced class extends the default one.
@@ -114,8 +116,6 @@ At the time of this writing, actually using static OAuth 2.0 credentials is prob
 In addition to the aforementioned keys belonging to both configs, the following keys are used in the Token datasource config. **Note:** there is a naming convention here: the name of the Token database config needs to be the same as the matching API config plus the string `'Token'`. Future versions may combine the two configs and dynamically generate the proper info. If you're reading this, that hasn't happened.
 
 <dl>
-<dt><b><code>scheme</code></b></dt>
-<dd>Valid values: <code>'http'</code> or <code>'https'</code>. Many, if not most, APIs prefer you to use HTTPS.</dd>
 <dt><b><code>host</code></b></dt>
 <dd>This must be equal to the hostname of the OAuth provider's credential server. This may or may not differ from the host used to provide the actual API services.</dd>
 <dt><b><code>authorize</code></b></dt>
@@ -181,7 +181,7 @@ be used. Optional conditions aren't checked, but are added when building the req
 
 ```
 
-You can specify the section by passing a `'section'` key in `find()` requests, otherwise it will default to the value of `$useTable` is for the model making the request.
+You can specify the section by passing a `'section'` key in `find()` requests, otherwise it will default to the value of `$useTable` for the model making the request.
 
 <br />
 <a id="routes"><h3>1.4 Routes</h3></a>
@@ -203,7 +203,6 @@ Where were we? So you have an Authorize object, which just exists to provide a y
 ```php
 
 	class MyController extends AppController{
-
 		public $Apis = array('twitter', 'facebook');
 	}
 
@@ -223,7 +222,7 @@ The CakePHP manual goes into great detail about how to attach both [auth objects
 <br />
 <a id="component-functions"><h3>2.1 Component Functions</h3></a>
 
-If you are using the provided authorization object, there is no need to explicitly direct the user to an authorization action; they will be redirected to the OAuth provider after an authorization failure. You must, however, implement an action somewhere in your application to handle the callback from the OAuth provider. For those that skipped the links on what actually happens in this process, now is a good time to review that information:
+If you are using the provided authorization object, there is no need to explicitly direct the user to an authorization action; they will be redirected to the OAuth provider after an authorization failure. You must, however, implement an action somewhere in your application to handle the callback from the OAuth provider. For those that missed the links on what actually happens in this process, now is a good time to review that information:
 
  * [OAuth v1 information](http://developer.yahoo.com/oauth/guide/oauth-auth-flow.html)
  * [OAuth v2 information](https://developers.google.com/accounts/docs/OAuth2#webserver)
@@ -231,11 +230,12 @@ If you are using the provided authorization object, there is no need to explicit
 If you do not need any special behavior for any step in this process, define a callback method as follows:
 
 ```php
-
-	function callback(){
-		$this->Oauth->callback('myApi');
+<?php
+	class MyApiController extends AppController {
+		function callback(){
+			$this->Oauth->callback('myApi');
+		}
 	}
-
 ```
 
 The Oauth component uses a Session variable `'Oauth.redirect'` to determine if users should be redirected elsewhere after a successful authorization. It sets this variable to the value of `$this->controller->request->here` when it begins to handle an Authorization failure, so hopefully after the user gets done authorizing your application's use of the Remote API on their behalf, they end up doing what they originally wanted to do on your site. If `'Oauth.redirect'` is not set, the callback function will return an array containing the new access token.
@@ -248,20 +248,23 @@ The Oauth component uses a Session variable `'Oauth.redirect'` to determine if u
 Copula provides a very simple interface at the Model layer, in the form of the OAuthConsumer Behavior. This is attached as normal for CakePHP using the `$actsAs` property. 
 
 ```php
-
+<?php
+	class ApiModel extends AppModel{
 		public $actsAs = array('Copula.OAuthConsumer' => array('autoFetch' => false));
+}
 ```
 
 The `'autoFetch'` key determines whether or not an access token is automatically fetched from the local database. If you set it to `false`, you must manually call `authorize()` before using any API functions. **Note:** If you are not storing access tokens in the database, you must set `'autoFetch'` to `false`. An example of this is shown below:
 
 ```php
-
-	protected function _authorize(){
-		$TokenStore = ClassRegistry::init('Copula.TokenStoreSession');
-		$user_id = AuthComponent::user('id');
-		return $this->authorize($user_id, $TokenStore, 'myApi');
+<?php
+	class ApiModel extends AppModel{
+		protected function _authorize(){
+			$TokenStore = ClassRegistry::init('Copula.TokenStoreSession');
+			$user_id = AuthComponent::user('id');
+			return $this->authorize($user_id, $TokenStore, 'myApi');
+		}
 	}
-
 ```
 
 The authorize() function retrieves tokens from storage, if they exist, and throws an exception if they do not exist. OAuth 2.0 tokens have their expiration checked when retrieved from the database. This will probably fail hard if your time zone is not set correctly. If the token is determined to be expired, it will be refreshed automatically. If a token is expired and cannot be refreshed, an exception will be thrown. The token is then merged with the model's datasource configuration.
@@ -274,7 +277,7 @@ The OAuthConsumer Behavior also provides a method for models to switch datasourc
 The simplest model configuration would probably look something like the following:
 
 ```php
-
+<?php
 	class Widget extends AppModel {
 		public $useDbConfig = 'myapi';
 		public $useTable = 'job';
@@ -285,7 +288,7 @@ The simplest model configuration would probably look something like the followin
 
 `$useTable` should refer to a section in your path configuration, as defined in [Paths](#paths).
 
-You should be able to use `find()` and `save()` as normal. Updating records *might* work, and deleting records is probably going to take a lot of hacking on the part of the Copula developers, due to the way those things are implemented in CakePHP. Also, they may not even make sense in the context of a given API, so you may be on your own there.
+You should be able to use `find()` and `save()` as normal. Updating records *might* work, and deleting records is probably going to take a lot of hacking on the part of the Copula developers, due to the way those things are implemented in CakePHP. Also, they may not even make sense in the context of a given API, so you may be on your own there. Feedback on this subject would be nice.
 
 ---
 
@@ -303,28 +306,44 @@ If those instructions were not clear, you probably shouldn't attempt them.
 
 Earlier in this document you may have noticed a suggestion that using static OAuth 2.0 credentials was a bad idea. If you've been following along, you may also have noticed that expired tokens are refreshed when they are retrieved from storage. The ApisSource datasource provides no methods for detecting token expiration. Additionally, it is highly unlikely that any methods could be implemented, as the behavior of the API at that point is not defined. Most APIs will return a 403 error, but this might also be returned for other reasons.
 
-At this point, the behavior for any HTTP errors is to call `Model::onError()` if it exists, and then to return false. This follows the pattern of the other datasource objects. The only problem with this is that technically an expired token is a recoverable error, and at the time of this writing it's not really possible to do that. This will probably be simplified with the addition of an afterRequest callback, at which point this section will be rewritten, but using static OAuth 2.0 credentials will still be a bad idea.
+When using static OAuth 2.0 credentials, it is highly likely that you will end up using an expired token, whereas most other implementations should be able to avoid this. It will therefore be imperative that you detect this error and recover from it.
 
-The big reason for extending the APIs datasource is to implement the `beforeRequest()` callback. Changing the behavior of `decode()` and the logging functions may also be advisable.
+This guide can only offer a general guideline to how token refreshing might be implemented. Do not use the example; write your own version. That goes double if you're using static OAuth 2.0 credentials. 
+
+```php
+<?php
+	#filename: Plugin/Example/Model/Datasource/ExampleSource.php
+
+	class ExampleSource extends ApisSource {
+		public function afterRequest(Model $model, HttpSocketResponse $response){
+			if($response->code == 403 && !(strpos($response->body, 'Expired Token') === false)){
+				$id = AuthComponent::user('id');
+				$model->authorize($model, $id);
+				return $this->request($model);
+			}
+			return parent::afterRequest($model, $response);
+	}
+```
+The other big reason for extending the APIs datasource is to implement the `beforeRequest()` callback. Changing the behavior of `decode()` and the logging functions may also be advisable.
 
 ```php
 
-	#Plugin/Example/Model/Datasource/ExampleSource.php
+	#filename: Plugin/Example/Model/Datasource/ExampleSource.php
 
+	<?php
 	App::uses('ApisSource', 'Copula.Model/Datasource');
 	class ExampleSource extends ApisSource {
 		// Key => Values substitutions in the uri-path right before the request is made. Scans uri-path for :keyname
 		public $tokens = array();
 		// Last minute tweaks
 		public function beforeRequest(Model $model) {
-			$request['header']['x-li-format'] = $this->options['format'];
-			return $request;
+			$model->request['header']['x-li-format'] = $this->config['format'];
+			return $model->request;
 		}
 	}
 ```
 
-It should be noted that the `beforeRequest()` callback should return the request array.
-
+It should be noted that the `beforeRequest()` callback should return the request array. Similarly, `afterRequest()` should return the (possibly processed) results.
 ---
 
 <br />
