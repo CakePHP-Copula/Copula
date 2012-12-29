@@ -9,9 +9,8 @@
  * @author Dean Sofer
  * */
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
+App::uses('HttpSocketOauth', 'Copula.Lib');
 App::uses('HttpSocket', 'Network/Http');
-App::uses('OauthCredentials', 'Apis.Lib');
 
 class ApisSource extends DataSource {
 
@@ -55,13 +54,12 @@ class ApisSource extends DataSource {
 	protected $_baseConfig = array(
 		'format' => 'json',
 		'escape' => 'false',
-		'datasource' => '',
 		'authMethod' => 'Basic'
 	);
 
 	/**
 	 * Stores mapping of db actions to http methods
-	 * @var type 
+	 * @var type
 	 */
 	public $restMap = array(
 		'create' => 'POST',
@@ -72,27 +70,6 @@ class ApisSource extends DataSource {
 
 	/**
 	 *
-	 * @param array $config
-	 */
-	/*public function __construct($config) {
-		// Store the API configuration map
-		list($plugin, $name) = pluginSplit($config['datasource'], true);
-		$name = str_replace('Source', '', $name);
-		$this->map = $this->_getPaths($name, $plugin);
-		parent::__construct($config);
-	}*/
-
-	/**
-	 * This function returns the REST paths for the datasource. Could be extended to use database or XML.
-	 * @param string $plugin
-	 * @return array
-	 */
-	/*protected function _getPaths($name, $plugin = null) {
-		return Configure::read('Apis.' . $name . '.path');
-	}*/
-
-	/**
-	 * 
 	 * @param string|array $url url or array of config options
 	 * @return \HttpSocketOauth|\HttpSocket
 	 */
@@ -110,16 +87,25 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param \Model $model
 	 * @return mixed
 	 */
 	public function describe(\Model $model) {
-		return $model->schema();
+		if (!empty($model->schema)) {
+			$schema = $model->schema;
+		} elseif (!empty($this->_schema)) {
+			$schema = $this->_schema;
+		} elseif (!empty($this->map)) {
+			$schema = $this->map;
+		} else {
+			return null;
+		}
+		return $schema;
 	}
 
 	/**
-	 * 
+	 *
 	 * @param string|array $query array of params to be converted
 	 * @param boolean $escape whether to escape the separator
 	 * @return string string containing query
@@ -132,25 +118,31 @@ class ApisSource extends DataSource {
 	}
 
 	protected function _buildRequest($apiName, $type = 'read') {
-		$this->map = Configure::read("Apis.$apiName.path");
+		if (empty($this->map)) {
+			$this->map = Configure::read("Copula.$apiName.path");
+		}
 		$request = array();
 		$request['method'] = $this->restMap[$type];
 		$request['uri']['host'] = $this->map['host'];
 		$request['auth'] = $this->_getAuth($this->config['authMethod'], $apiName);
-		$scheme = Configure::read("Apis.$apiName.oauth.scheme");
-		if (!empty($scheme)) {
-			$request['uri']['scheme'] = $scheme;
+		//$scheme = Configure::read("Copula.$apiName.oauth.scheme");
+		if (!empty($this->config['scheme'])) {
+			$request['uri']['scheme'] = $this->config['scheme'];
 		}
 		return $request;
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $data
 	 * @return null
 	 */
 	public function listSources($data = null) {
-		return null;
+		if (!empty($this->map->create)) {
+			return array_keys($this->map->create);
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -178,27 +170,22 @@ class ApisSource extends DataSource {
 		$Http->request($model->request);
 
 		$this->took = round((microtime(true) - $t) * 1000, 0);
-		$this->logQuery($model, $Http);
+		$this->logQuery($Http);
 
-		$model->response = $this->decode($Http->response);
-
-		if (!$Http->response->isOk()) {
-			$model->onError();
-			return false;
-		}
+		$model->response = $this->afterRequest($model, $Http->response);
 
 		return $model->response;
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $query
 	 * @param \HttpSocketResponse $response
 	 * @return void
 	 */
-	public function logQuery(Model $model, \HttpSocket $Http) {
+	public function logQuery(\HttpSocket $Socket) {
 		if (Configure::read('debug')) {
-			$logItems = array($Http->request['raw'], $Http->response->raw);
+			$logItems = array($Socket->request['raw'], $Socket->response->raw);
 			foreach ($logItems as &$logPart) {
 				if (strlen($logPart) > $this->_logLimitBytes) {
 					$logPart = substr($logPart, 0, $this->_logLimitBytes) . ' [ ... truncated ...]';
@@ -214,12 +201,11 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param type $method
 	 * @return array
 	 */
 	protected function _getAuth($method, $apiName) {
-		$token = OauthCredentials::getAccessToken($apiName);
 		switch ($method) {
 			case 'Basic':
 
@@ -235,8 +221,8 @@ class ApisSource extends DataSource {
 					'oauth_consumer_key' => $this->config['login'],
 					'oauth_consumer_secret' => $this->config['password']
 						,);
-				$auth['oauth_token'] = (!empty($token['access_token'])) ? $token['access_token'] : null;
-				$auth['oauth_token_secret'] = (!empty($token['token_secret'])) ? $token['token_secret'] : null;
+				$auth['oauth_token'] = (!empty($this->config['access_token'])) ? $this->config['access_token'] : null;
+				$auth['oauth_token_secret'] = (!empty($this->config['token_secret'])) ? $this->config['token_secret'] : null;
 				break;
 			case 'OAuthV2':
 				$auth = array(
@@ -245,7 +231,7 @@ class ApisSource extends DataSource {
 					'client_id' => $this->config['login'],
 					'client_secret' => $this->config['password']
 				);
-				$auth['access_token'] = (isset($token['access_token'])) ? $token['access_token'] : null;
+				$auth['access_token'] = (isset($this->config['access_token'])) ? $this->config['access_token'] : null;
 				break;
 			default:
 				$auth = null;
@@ -272,10 +258,10 @@ class ApisSource extends DataSource {
 			case 'application/rss+xml':
 				App::uses('Xml', 'Utility');
 				$Xml = Xml::build($response->body());
-				$response = Xml::toArray($Xml);
+				$return = Xml::toArray($Xml);
 				//one of the two lines of code following is unecessary.
 				//Unset will delete the reference and mark the memory for garbage collection.
-				//setting null will clear the memory immediately. 
+				//setting null will clear the memory immediately.
 				//There is some overhead involved in shrinking the stack, so if you are calling this repeatedly it may not be faster.
 				$Xml = null;
 				unset($Xml);
@@ -283,10 +269,13 @@ class ApisSource extends DataSource {
 			case 'application/json':
 			case 'application/javascript':
 			case 'text/javascript':
-				$response = json_decode($response->body(), true);
+				$return = json_decode($response->body(), true);
+				break;
+			default:
+				$return = $response->body();
 				break;
 		}
-		return $response;
+		return $return;
 	}
 
 	/**
@@ -317,7 +306,7 @@ class ApisSource extends DataSource {
 	 */
 	protected function _scanMap($action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
-			throw new CakeException(__('Section %s not found in Apis Driver Configuration Map - ', $section) . get_class($this), 500);
+			throw new CakeException(__('Section %s not found in Copula Driver Configuration Map - ', $section) . get_class($this), 500);
 		}
 		$map = $this->map[$action][$section];
 		foreach ($map as $path => $conditions) {
@@ -356,6 +345,15 @@ class ApisSource extends DataSource {
 		return $model->request;
 	}
 
+	public function afterRequest(Model &$model, HttpSocketResponse &$response) {
+		if (!$response->isOk()) {
+			$model->onError();
+			return false;
+		} else {
+			return $this->decode($response);
+		}
+	}
+
 	/**
 	 * Uses standard find conditions. Use find('all', $params). Since you cannot pull specific fields,
 	 * we will instead use 'fields' to specify what table to pull from.
@@ -369,9 +367,10 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
-                if (is_null($queryData['conditions'])) {
-                        $queryData['conditions'] = array();
-                }
+		if (empty($queryData['section'])) {
+			$queryData['section'] = $model->useTable;
+		}
+		$queryData['conditions'] = (isset($queryData['conditions'])) ? $queryData['conditions'] : array();
 		$model->request = $this->_buildRequest($model->useDbConfig, 'read');
 		if (!empty($queryData['path'])) {
 			$model->request['uri']['path'] = $queryData['path'];
@@ -392,7 +391,7 @@ class ApisSource extends DataSource {
 	 * @param array $values Unused
 	 */
 	public function create(Model $model, $fields = null, $values = null) {
-		$model->request = $this->_buildRequest($model->useDbConfig,'create');
+		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
 		if ($scan) {
 			$model->request['uri']['path'] = $scan[0];
@@ -431,7 +430,7 @@ class ApisSource extends DataSource {
 	 * @param mixed $id Unused
 	 */
 	public function delete(Model $model, $id = null) {
-		$this->_buildRequest($model->useDbConfig,'delete');
+		$this->_buildRequest($model->useDbConfig, 'delete');
 		return $this->request($model);
 	}
 

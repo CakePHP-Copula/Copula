@@ -1,17 +1,21 @@
 <?php
 
-App::uses('OauthAuthorize', 'Apis.Controller/Component/Auth');
+App::uses('OauthAuthorize', 'Copula.Controller/Component/Auth');
 App::uses('CakeRequest', 'Network');
 App::uses('AuthComponent', 'Controller/Component');
-App::uses('Token', 'Apis.Model');
+App::uses('TokenStoreDb', 'Copula.Model');
+App::uses('TokenStoreSession', 'Copula.Model');
 App::uses('Controller', 'Controller');
 
+class FakeController extends Controller{
+	public $Apis = array('testapi');
+}
 /**
  * @property OauthAuthorize $auth
  */
 class OauthAuthorizeTestCase extends CakeTestCase {
 
-	var $fixtures = array('plugin.apis.token');
+	var $fixtures = array('plugin.copula.tokenstoredb');
 
 	public function setUp() {
 		parent::setUp();
@@ -19,16 +23,15 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 			'login' => 'login',
 			'password' => 'password',
 			'authMethod' => 'OAuthV2',
-			'datasource' => 'Apis.ApisSource'
+			'datasource' => 'Copula.ApisSource'
 		));
 		$this->request = new CakeRequest();
-		$this->controller = $this->getMock('Controller');
+		$this->controller = $this->getMock('FakeController');
 		$this->components = $this->getMock('ComponentCollection');
 		$this->components->expects($this->any())
 				->method('getController')
 				->will($this->returnValue($this->controller));
-		$this->auth = new OauthAuthorize(
-				$this->components, array('Apis' => array('testapi' => array('store' => ''))));
+		$this->auth = new OauthAuthorize($this->components);
 	}
 
 	public function tearDown() {
@@ -38,20 +41,26 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 	}
 
 	public function testConstructor() {
-		$this->assertInstanceOf('Token', $this->auth->Token);
 		$this->assertTrue(!empty($this->auth->settings['Apis']));
 	}
 
-	public function testAuthorizeTrue() {
+	public function testAuthorize() {
 		$user = array('id' => '1');
+		$this->auth->TokenStoreDb = $this->getMock('TokenStoreDb');
+		$this->auth->TokenStoreDb->expects($this->any())
+				->method('checkToken')
+				->will($this->onConsecutiveCalls(false, true));
+		$this->assertFalse($this->auth->authorize($user, $this->request));
+		$this->assertFalse($this->controller->Apis['testapi']['authorized']);
 		$this->assertTrue($this->auth->authorize($user, $this->request));
+		$this->assertTrue($this->controller->Apis['testapi']['authorized']);
 	}
-
+/*
 	public function testAuthorizeNoDb() {
 		unset($this->auth->Token);
 		$this->auth->Token = $this->getMock('Token');
 		$this->auth->Token->expects($this->any())
-				->method('getTokenDb')
+				->method('getToken')
 				->will($this->returnValue(array()));
 		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
 	}
@@ -65,7 +74,7 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 		$this->auth->settings['Apis']['testapi']['store'] = 'Cookie';
 		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
 	}
-
+*/
 }
 
 ?>

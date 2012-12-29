@@ -1,5 +1,5 @@
-<?php 
-class ApiSchema extends CakeSchema {
+<?php
+class CopulaSchema extends CakeSchema {
 
 	public function before($event = array()) {
 		return true;
@@ -16,6 +16,7 @@ class ApiSchema extends CakeSchema {
 		'modified' => array('type' => 'datetime', 'null' => true, 'default' => null),
 		'refresh_token' => array('type' => 'text', 'null' => true, 'default' => null, 'collate' => 'utf8_general_ci', 'charset' => 'utf8'),
 		'token_secret' => array('type' => 'text', 'null' => true, 'default' => null, 'collate' => 'utf8_general_ci', 'charset' => 'utf8'),
+		'expires_in' => array('type' => 'string', 'null' => true, 'default' => null, 'collate' => 'utf8_general_ci', 'charset' => 'utf8'),
 		'indexes' => array(
 			'PRIMARY' => array('column' => 'id', 'unique' => 1),
 			'user_id' => array('column' => array('user_id', 'api'), 'unique' => 1)

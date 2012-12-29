@@ -1,74 +1,44 @@
 <?php
 
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
-App::uses('Token', 'Apis.Model');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('Token', 'Copula.Model');
+App::uses('OauthConfig', 'Copula.Lib');
+
 /**
  * @property Token $Token
  */
 class OauthAuthorize extends BaseAuthorize {
 
-	public $Token;
-
 	public function __construct(\ComponentCollection $collection, $settings = array()) {
-		$this->Token = ClassRegistry::init('Apis.Token');
-		$defaults = array('Apis' => array());
-		$settings = array_merge($defaults, $settings);
+		$this->settings['Apis'] = $collection->getController()->Apis;
 		parent::__construct($collection, $settings);
 	}
 
 	public function authorize($user, \CakeRequest $request) {
-		$dbs = ConnectionManager::sourceList();
-		$apiNames = array_intersect(array_keys($this->settings['Apis']), array_values($dbs));
-		$count = 0;
-		foreach ($apiNames as $index => $name) {
-			switch ($this->settings['Apis'][$name]['store']) {
-				case 'Session':
-					$allowed = $this->_checkTokenSession($name, $user['id']);
-					break;
-				case 'Cookie':
-					$allowed = $this->_checkTokenCookie($name, $user['id']);
-					break;
-				default:
-					$allowed = $this->_checkTokenDb($name, $user['id']);
-					break;
+		$dbs = ConnectionManager::enumConnectionObjects();
+		$connNames = array_keys($dbs);
+		$Apis = (key($this->settings['Apis']) === 0) ? $this->settings['Apis'] : array_keys($this->settings['Apis']);
+		$apiNames = array_intersect($Apis, $connNames);
+		$authorized = true;
+		foreach ($apiNames as $name ) {
+			$storeMethod = (empty($this->settings['Apis'][$name]['store'])) ? 'Db' : ucfirst($this->settings['Apis'][$name]['store']);
+			$Store = $this->_getTokenStore($storeMethod);
+			if ($Store instanceof TokenStoreInterface) {
+				$allowed = $Store->checkToken($name, $user['id']);
 			}
-			if ($allowed) {
-				$count++;
+			$this->controller()->Apis[$name]['authorized'] = $allowed;
+			if (!$allowed) {
+				$authorized = false;
 			}
 		}
-		if ($count == count($apiNames)) {
-			return true;
+		return $authorized;
+	}
+
+	protected function _getTokenStore($storeMethod) {
+		if (!isset($this->{'TokenStore' . $storeMethod})) {
+			$this->{'TokenStore' . $storeMethod} = ClassRegistry::init('Copula.TokenStore' . $storeMethod);
 		}
-		return false;
-	}
-        
-        private function __setToken($apiName, $token) {
-		if (!empty($token['access_token'])) {
-			$tokenSecret = (empty($token['token_secret'])) ? null : $token['token_secret'];
-			OauthCredentials::setAccessToken(strtolower($apiName), $token['access_token'], $tokenSecret);
-			return true;
-		} else {
-			//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
-			return false;
-		}  
-        }
-        
-	protected function _checkTokenDb($apiName, $userId) {
-		$token = $this->Token->getTokenDb($userId, $apiName);
-                return $this->__setToken($apiName, $token);
-	}
-
-	protected function _checkTokenSession($apiName, $userId) {
-		App::uses('CakeSession', 'Model/Datasource');
-		$token = CakeSession::read('Oauth.' . $apiName);
-		return $this->__setToken($apiName, $token);
-	}
-
-	protected function _checkTokenCookie($apiName, $userId) {
-		//not implemented
-		//$this->controller()->Auth->flash('Not authorized to access ' . $apiName . ' Api functions');
-		return false;
+		return $this->{'TokenStore' . $storeMethod};
 	}
 
 }

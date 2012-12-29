@@ -1,16 +1,17 @@
 <?php
 
-App::uses('ApisSource', 'Apis.Model/Datasource');
+App::uses('ApisSource', 'Copula.Model/Datasource');
 App::uses('AppModel', 'Model');
 App::uses('PhpReader', 'Configure');
 App::uses('HttpSocketResponse', 'Network/Http');
-App::uses('OauthCredentials', 'Apis.Lib');
+App::uses('HttpSocket', 'Network/Http');
+App::uses('OauthConfig', 'Copula.Lib');
 
-class ApisTestModel extends AppModel {
+class CopulaTestModel extends AppModel {
 
 	var $useDbConfig = "testapi";
 	var $useTable = 'section';
-	protected $_schema = array(
+	var $schema = array(
 		'id' => array(
 			'type' => 'integer',
 			'null' => false,
@@ -37,7 +38,7 @@ class ApisTestModel extends AppModel {
 }
 
 /**
- * @property ApisTestModel $model
+ * @property CopulaTestModel $model
  * @property ApisSource $Apis
  */
 class ApisSourceTest extends CakeTestCase {
@@ -64,10 +65,11 @@ class ApisSourceTest extends CakeTestCase {
 		'callback' => 'https://www.test.com/oauth2callback'
 	);
 	var $dbconf = array(
-		'datasource' => 'Apis.ApisSource',
+		'datasource' => 'Copula.ApisSource',
 		'login' => 'login',
 		'password' => 'password',
-		'authMethod' => 'OAuthV2'
+		'authMethod' => 'OAuthV2',
+		'scheme' => 'https'
 	);
 	var $paths = array(
 		'host' => 'www.example.com',
@@ -92,16 +94,15 @@ class ApisSourceTest extends CakeTestCase {
 
 	public function setUp() {
 		parent::setUp();
-		Configure::write('Apis.testapi.path', $this->paths);
-		Configure::write('Apis.testapi.oauth', $this->config);
-		OauthCredentials::reset();
+		Configure::write('Copula.testapi.path', $this->paths);
+	//	Configure::write('Copula.testapi.oauth', $this->config);
 		$this->Apis = ConnectionManager::create('testapi', $this->dbconf);
-		$this->model = ClassRegistry::init('ApisTestModel');
+		$this->model = ClassRegistry::init('CopulaTestModel');
 	}
 
 	function testDescribe() {
 		$results = $this->Apis->describe($this->model);
-		$this->assertEquals($this->model->_schema, $results);
+		$this->assertEquals($this->model->schema, $results);
 	}
 
 	function testBeforeRequest() {
@@ -111,18 +112,19 @@ class ApisSourceTest extends CakeTestCase {
 
 	function testLogQuery() {
 		$t = microtime(true);
-		$Http = new HttpSocket();
-		$Http->response->raw = "This is a string to be logged";
-		$Http->request['raw'] = "This is another string";
+		$Socket = new HttpSocketOauth();
+		$Socket->request['raw'] = 'This is another string';
+		$Socket->response = new HttpSocketResponse();
+		$Socket->response->raw = "This is a string to be logged";
 		Configure::write('debug', '1');
 		$this->Apis->took = round((microtime(true) - $t) * 1000, 0);
-		$this->Apis->logQuery($this->model, $Http);
+		$this->Apis->logQuery($Socket);
 		$log = $this->Apis->getLog(false);
-		$this->assertEquals($Http->request['raw'], $log['log'][0]['query']);
-		$this->assertEquals($Http->response->raw, $log['log'][0]['response']);
+		$this->assertEquals($Socket->request['raw'], $log['log'][0]['query']);
+		$this->assertEquals($Socket->response->raw, $log['log'][0]['response']);
 		$this->assertEquals($this->Apis->took, $log['log'][0]['took']);
-		$Http->request['raw'] .= str_repeat('abcdef', 1000);
-		$this->Apis->logQuery($this->model, $Http);
+		$Socket->request['raw'] .= str_repeat('abcdef', 1000);
+		$this->Apis->logQuery($Socket);
 		$log2 = $this->Apis->getLog(false);
 		$this->assertTrue((substr($log2['log'][0]['query'], '-20')) == '[ ... truncated ...]');
 	}
@@ -251,7 +253,6 @@ class ApisSourceTest extends CakeTestCase {
 	}
 
 	public function tearDown() {
-		OauthCredentials::reset();
 		ConnectionManager::drop('testapi');
 		unset($this->model, $this->Apis);
 		ClassRegistry::flush();
