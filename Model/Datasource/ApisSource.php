@@ -102,7 +102,7 @@ class ApisSource extends DataSource {
 		parent::__construct($config);
 	}
 
-	public function describe($model) {
+	public function describe() {
 		return array();
 	}
 
@@ -116,7 +116,7 @@ class ApisSource extends DataSource {
  * @return array $response
  * @author Dean Sofer
  */
-	public function request(&$model) {
+	public function request(Model $model) {
 		if (is_object($model)) {
 			$request = $model->request;
 		} elseif (is_array($model)) {
@@ -124,7 +124,6 @@ class ApisSource extends DataSource {
 		} elseif (is_string($model)) {
 			$request = array('uri' => $model);
 		}
-
 		if (isset($this->config['method']) && $this->config['method'] == 'OAuth') {
 			$request = $this->addOauth($model, $request);
 		} elseif (isset($this->config['method']) && $this->config['method'] == 'OAuthV2') {
@@ -140,16 +139,18 @@ class ApisSource extends DataSource {
 		}
 
 		// Remove unwanted elements from request array
+		//debug($request);
+		//debug($this->Http->request);
+		//$header = $request['header'];
 		$request = array_intersect_key($request, $this->Http->request);
-
+		//debug($request);
 		if (!empty($this->tokens)) {
 			$request['uri']['path'] = $this->swapTokens($model, $request['uri']['path'], $this->tokens);
 		}
 
 		if (method_exists($this, 'beforeRequest')) {
-			$request = $this->beforeRequest($model, $request);
+ 			$request = $this->beforeRequest(&$model, $request);
 		}
-
 		$model->request = $request;
 
 		$timerStart = microtime(true);
@@ -188,11 +189,18 @@ class ApisSource extends DataSource {
 		if (is_object($model)) {
 			$model->response = $response;
 		}
-
-		// Check response status code for success or failure
+        // Check response status code for success or failure
 		if (substr($this->Http->response['status']['code'], 0, 1) != 2) {
+		    //Invalid Session so try to refresh the accessToken
+		    //debug($this->Http->response);
+		    $error = json_decode($this->Http->response,true);
+		    //debug($error);
+		    if (isset($error[0]) && $error[0]['errorCode'] == 'INVALID_SESSION_ID') {
+		        $accessToken = $this->refreshAccessToken($model);
+
+		    }
 			if (is_object($model) && method_exists($model, 'onError')) {
-				$model->onError();
+				$model->onError('INVALID_SESSION_ID');
 			}
 			return false;
 		}
@@ -208,7 +216,7 @@ class ApisSource extends DataSource {
 	 * @return array $request
 	 */
 	public function addOauth(&$model, $request) {
-		if (!empty($this->config['oauth_token']) && !empty($this->config['oauth_token_secret'])) {
+	    if (!empty($this->config['oauth_token']) && !empty($this->config['oauth_token_secret'])) {
 			$request['auth']['method'] = 'OAuth';
 			$request['auth']['oauth_consumer_key'] = $this->config['login'];
 			$request['auth']['oauth_consumer_secret'] = $this->config['password'];
@@ -236,10 +244,48 @@ class ApisSource extends DataSource {
 			$request['auth']['client_id'] = $this->config['login'];
 			$request['auth']['client_secret'] = $this->config['password'];
 			if (isset($this->config['access_token'])) {
-				$request['auth']['access_token'] = $this->config['access_token'];
+				$request['header']['Authorization'] = 'OAuth ' . $this->config['access_token'];
 			}
 		}
 		return $request;
+	}
+	/**
+	 * Supplements a request array with oauth credentials
+	 *
+	 * @param object $model
+	 * @param array $request
+	 * @return array $request
+	 */
+	public function refreshAccessToken(Model $model) {
+       $oauthToken = ClassRegistry::init('OauthToken')->find('first', array('conditions' => array('user_id' => AuthComponent::user('id'),'type' => 'salesforce')));
+       //debug($oauthToken);
+           $request = array(
+	            'uri' => array(
+	                    'host' => $oauthToken['OauthToken']['instance_url'] . '/services/oauth2',
+	                    'path' => 'token',
+	                    'query' => array(
+	                        'grant_type' => 'refresh_token',
+	                        'client_id' => $this->config['login'],
+	                        'client_secret' => $this->config['password'],
+	                        'refresh_token' => $oauthToken['OauthToken']['refresh_token'],
+	                    )
+	            ),
+	            'scheme' => 'https',
+	            'method' => 'POST',
+	            );
+       App::uses('HttpSocket', 'Network/Http');
+       $Http = new HttpSocket();
+       $this->Http = $Http;
+        print_r($request);
+	    $json = $this->Http->request($request);
+	    $response = json_decode($json);
+	    //debug($response);
+	    if (isset($response->access_token)) {
+	    return $response->access_token;
+	    } else {
+	        return $response->error_description;
+	    }
+
 	}
 
 	/**
@@ -251,14 +297,16 @@ class ApisSource extends DataSource {
 	 */
 	public function decode($response) {
 		// Get content type header
-		$contentType = $this->Http->response['header']['Content-Type'];
-
+		if (!isset($this->Http->response['header']['Content-Type'])) {
+		    $contentType = 'application/json';
+		}else {
+		    $contentType = $this->Http->response['header']['Content-Type'];
+		}
 		// Extract content type from content type header
 		if (preg_match('/^([a-z0-9\/\+]+);\s*charset=([a-z0-9\-]+)/i', $contentType, $matches)) {
 			$contentType = $matches[1];
 			$charset = $matches[2];
 		}
-
 		// Decode response according to content type
 		switch ($contentType) {
 			case 'application/xml':
@@ -341,11 +389,17 @@ class ApisSource extends DataSource {
 		if (!isset($this->map[$action][$section])) {
 			throw new Exception('Section ' . $section . ' not found in Apis Driver Configuration Map - ' . get_class($this));
 		}
+
 		$map = $this->map[$action][$section];
+		//debug($action);
+		//debug($section);
+		//debug($fields);
+		//debug($map);
 		foreach ($map as $path => $conditions) {
 			$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
-			unset($conditions['optional']);
-			if (array_intersect($fields, $conditions) == $conditions) {
+			//unset($conditions['optional']);
+
+			if (is_array($conditions) && (array_intersect($fields, $conditions) == $conditions)) {
 				return array($path, $conditions, $optional);
 			}
 		}
@@ -376,7 +430,7 @@ class ApisSource extends DataSource {
  * @return array $request
  * @author Dean Sofer
  */
-	public function beforeRequest($model, $request) {
+	public function beforeRequest(&$model, $request) {
 		return $request;
 	}
 
@@ -390,7 +444,7 @@ class ApisSource extends DataSource {
  * @return mixed
  * @access public
  */
-	public function read(Model $model, $queryData = array(), $recursive = null) {
+	public function read(&$model, $queryData = array()) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -425,7 +479,7 @@ class ApisSource extends DataSource {
  * @param array $fields Unused
  * @param array $values Unused
  */
-	public function create(Model $model, $fields = null, $values = null) {
+	public function create(&$model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -449,7 +503,7 @@ class ApisSource extends DataSource {
  * @param array $fields Unused
  * @param array $values Unused
  */
-	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
+	public function update(&$model, $fields = null, $values = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
@@ -474,7 +528,7 @@ class ApisSource extends DataSource {
  * @param AppModel $model
  * @param mixed $id Unused
  */
-	public function delete(Model $model, $id = null) {
+	public function delete(&$model, $id = null) {
 		if (!isset($model->request)) {
 			$model->request = array();
 		}
