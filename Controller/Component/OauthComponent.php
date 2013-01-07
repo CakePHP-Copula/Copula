@@ -98,9 +98,12 @@ class OauthComponent extends Component {
 	 *
 	 * @return void
 	 */
-	public function startup(Controller $controller) {
+	public function startup() {
 		foreach ($this->_config as $name => $options) {
 			$isAuthorized = false;
+				/*if ($this->Session->check('Auth.User.salesforce_access_token')) {
+				    $this->Session->write('OAuth.'.$name.'.access_token', $this->Session->read('Auth.User.salesforce_access_token'));
+				}*/
 			if ($this->accessTokenConfig($name)) {
 				$isAuthorized = true;
 			} elseif ($this->accessTokenSession($name)) {
@@ -152,6 +155,7 @@ class OauthComponent extends Component {
 			$dbConfig = $this->useDbConfig;
 		}
 		return $this->Session->check('OAuth.'.$dbConfig.'.access_token') || ($this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret'));
+		//return $this->Session->check('Auth.User.salesforce_access_token') || $this->Session->check('OAuth.'.$dbConfig.'.access_token') || ($this->Session->check('OAuth.'.$dbConfig.'.oauth_token') && $this->Session->check('OAuth.'.$dbConfig.'.oauth_token_secret'));
 	}
 
 	/**
@@ -240,16 +244,11 @@ class OauthComponent extends Component {
 	 * @return void
 	 */
 	public function authorizeV2($oAuthConsumerKey, $oAuthCallback) {
+
 		$this->_getMap();
 		$redirect = $this->_oAuthRequestDefaults['uri']['scheme'] . '://' . $this->_map['hosts']['oauth'] . '/' . $this->_map['oauth']['authorize'] . '?client_id=' . $oAuthConsumerKey . '&redirect_uri=' . $oAuthCallback;
-		if (!empty($this->_config[$this->useDbConfig]['scope'])) {
+			if (!empty($this->_config[$this->useDbConfig]['scope'])) {
 			$redirect .= '&scope=' . $this->_config[$this->useDbConfig]['scope'];
-		}
-		if($this->useDbConfig == 'salesforce') {
-		    $redirect .= '&display=popup';
-		}
-		if (!empty($this->_config[$this->useDbConfig]['response_type'])) {
-			$redirect .= '&response_type=' . $this->_config[$this->useDbConfig]['response_type'];
 		}
 		$this->controller->redirect($redirect);
 	}
@@ -321,20 +320,19 @@ class OauthComponent extends Component {
 				'code' => $oAuthCode,
 			)
 		));
-
+		//debug($request);
 		App::uses('HttpSocketOauth', 'HttpSocketOauth.Lib');
 		$Http = new HttpSocketOauth();
-
-		$response = $Http->request($request);
-
-		if ($Http->response['status']['code'] != 200) {
+        $response = $Http->request($request);
+        //debug($response);
+        if ($Http->response['status']['code'] != 200) {
 			return false;
 		}
         if (is_string($response)) {
 		parse_str($response, $accessToken);
 
 		return $accessToken;
-	}
+        }
 
 		return $response['body'];
 	}
@@ -464,7 +462,7 @@ class OauthComponent extends Component {
 	 *
 	 * This method exchanges the authorised request token for the OAuth Access
 	 * Token and OAuth Access Token Secret and stores them in the session before
-	 * redirecting the user back to the URL passed in in the redirect parameter to
+	 * redirecting the user back to the URL passed in to the redirect parameter to
 	 * the connect action above, or if that is not set, the details are dumped
 	 * out.
 	 */
@@ -510,12 +508,16 @@ class OauthComponent extends Component {
 
 		if ($accessToken) {
 			$sessionData = $this->Session->read('OAuth.'.$this->useDbConfig);
-			$sessionData = array_merge($sessionData, json_decode($accessToken,true));
+
+			// bug - not arrays when auth failed, or not authenticated
+
+			$sessionData = array_merge($sessionData, $accessToken);
 			$this->Session->write('OAuth.'.$this->useDbConfig, $sessionData);
 
 			if ($redirect) {
 				$this->_error(__d('oauth', 'Successfully signed into '.$this->useDbConfig), $redirect);
 			} else {
+    			// no redirect specified, so return the accessToken
 				return $accessToken;
 			}
 
@@ -527,7 +529,8 @@ class OauthComponent extends Component {
 
 	/**
 	 * Sets message in session flash and redirects to redirect URL if not empty,
-	 * else just dump the message out on the screen.
+	 * 1) else just dump the message out on the screen.
+	 * 2) else return the error message
 	 *
 	 * @param string $message
 	 * @param string $redirect
@@ -539,7 +542,7 @@ class OauthComponent extends Component {
 			$this->controller->redirect($redirect);
 		}
 
-		die($message);
-
+		return false;
+		//die($message);
 	}
 }

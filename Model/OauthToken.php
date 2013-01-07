@@ -1,4 +1,10 @@
 <?php
+/**
+ * OauthToken Model for storing OauthToken Data. Depending on the API you are using, you may need
+ * to add new fields to suit your needs.
+ * @author Paul Marshall <www.protelligence.com>
+ *
+ */
 class OauthToken extends ApisAppModel {
 
     public $belongsTo = array(
