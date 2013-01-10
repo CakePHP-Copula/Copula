@@ -18,7 +18,7 @@ In addition, Copula is well-tested, and working towards 100% code coverage.
 ##Installation
 
 * Clone or download Copula to `app/Plugin/Copula`
-* Follow the Integration Guide
+* Follow the [Integration Guide](https://github.com/CakePHP-Copula/Copula/blob/master/Integration.md)
 
 ##Implementations
 
