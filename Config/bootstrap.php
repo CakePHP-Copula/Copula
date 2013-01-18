@@ -1,4 +1,0 @@
-<?php
-
-CakePlugin::load('HttpSocketOauth');
-?>
