@@ -5,8 +5,9 @@ App::uses('Controller', 'Controller');
 App::uses('CakeRequest', 'Network');
 App::uses('CakeResponse', 'Network');
 App::uses('HttpSocketResponse', 'Network/Http');
-App::uses('HttpSocketOauth', 'Copula.Lib');
+App::uses('HttpSocketOauth', 'Copula.Network/Http');
 App::uses('ComponentCollection', 'Controller');
+App::uses('SessionComponent', 'Controller/Component');
 App::uses('OauthComponent', 'Copula.Controller/Component');
 
 class TestController extends Controller {
@@ -47,35 +48,33 @@ class OauthComponentTest extends CakeTestCase {
 		$this->controller->Apis = array('testapi');
 		$this->controller->constructClasses();
 		$this->Oauth = new OauthComponent($collection);
-		ConnectionManager::create('testapi', array(
-			'datasource' => 'Copula.ApisSource',
-			'login' => 'login',
-			'password' => 'password',
+		Configure::write('Copula.testapi.Auth', array(
 			'authMethod' => 'OAuthV2',
 			'scheme' => 'https',
-			'host' => 'www.example.com/api'
-		));
-		ConnectionManager::create('testapiToken', array(
-			'datasource' => 'Copula.RemoteTokenSource',
-			'login' => 'login',
-			'password' => 'password',
-			'authMethod' => 'OAuthV2',
-			'scheme' => 'https',
+			'host' => 'www.example.com/api',
 			'authorize' => 'auth',
 			'access' => 'token',
 			'request' => 'request',
 			'host' => 'accounts.example.com/oauth2',
 			'scope' => 'https://www.example.com/auth/',
-			'callback' => 'https://localhost.local/oauth2callback'));
-		$ds = ConnectionManager::getDataSource('testapiToken');
-		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
+			'callback' => 'https://localhost.local/oauth2callback'
+		));
+		ConnectionManager::create('testapi', array(
+			'datasource' => 'Copula.ApisSource',
+			'login' => 'login',
+			'password' => 'password'
+		));
 		$this->Oauth->initialize($this->controller);
 		$this->Oauth->startup($this->controller);
+		$this->Oauth->TokenSource->beforeQuery(array('api' => 'testapi'));
+		$ds = ConnectionManager::getDataSource('testapiToken');
+		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
 	}
 
 	function tearDown() {
 		ConnectionManager::drop('testapi');
 		ConnectionManager::drop('testapiToken');
+		Configure::delete('Copula.testapi.Auth');
 		unset($this->controller, $this->Oauth);
 		parent::tearDown();
 	}
@@ -85,44 +84,49 @@ class OauthComponentTest extends CakeTestCase {
 	}
 
 	function testAuthorize() {
-		ConnectionManager::getDataSource('testapiToken')->setConfig(array('authMethod' => 'OAuth'));
-		$this->Oauth->authorize('testapi', 'oauthToken');
+		Configure::write('Copula.testapi.Auth.authMethod', 'OAuth');
+		$results = $this->Oauth->authorize('testapi', 'oauthToken');
 		$expected = "https://accounts.example.com/oauth2/auth?oauth_token=oauthToken";
-		$this->assertEquals($expected, $this->controller->redirect);
+		$this->assertEquals($expected, $results);
 	}
 
 	function testAuthorizeV2() {
-		$this->Oauth->authorizeV2('testapi');
+		$results = $this->Oauth->authorizeV2('testapi');
 		$expected = 'https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline';
-		$this->assertEquals($expected, $this->controller->redirect);
+		$this->assertEquals($expected, $results);
 	}
 
-	/*
-	  function testGetAccessToken() {
-	  ConnectionManager::getDataSource('testapi')->setConfig(array('authMethod' => 'OAuth'));
-	  $result = $this->Oauth->getAccessToken('testapi', $authVars);
-	  $this->assertInternalType('array', $result);
-	  }
+	function testBeforeRedirectNoAuto() {
+		$this->Oauth->settings['autoAuth'] = false;
+		$this->assertNull($this->Oauth->beforeRedirect($this->controller, 'someurl'));
+	}
 
-	  function testGetAccessTokenV2() {
-	  $result = $this->Oauth->getAccessTokenV2('testapi', $token);
-	  $this->assertEquals('This is a test response body. What did you expect?', $result);
-	  }
+	function testBeforeRedirectNoFail() {
+		$this->Oauth->settings['autoAuth'] = true;
+		$this->assertNull($this->Oauth->beforeRedirect($this->controller, 'someurl'));
+	}
 
-	  function testGetOauthRequestToken() {
-	  $result = $this->Oauth->getOauthRequestToken('testapi');
-	  $this->assertInternalType('array', $result);
-	  }
-	 */
+	function testBeforeRedirectNoApis() {
+		unset($this->controller->Apis);
+		$this->assertNull($this->Oauth->beforeRedirect($this->controller, 'someurl'));
+	}
 
-	function testConnectV2() {
-		$this->Oauth->connect('testapi');
-		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline";
-		$this->assertEquals($expected, $this->controller->redirect);
+	function testGetOAuthNoApiConfig() {
+		$this->assertFalse($this->Oauth->getOauthUri('someapi', 'access'));
+	}
+
+	function testbeforeRedirectV2() {
+		$this->controller->Apis['testapi']['authorized'] = false;
+		$results = $this->Oauth->beforeRedirect($this->controller, 'some_url');
+		$expected = array("https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline");
+		$this->assertEquals($expected, $results);
+		$this->assertEmpty($this->controller->Apis['testapi']);
 	}
 
 	function testConnectV1() {
+		$this->controller->Apis['testapi']['authorized'] = false;
 		$ds = ConnectionManager::getDataSource('testapiToken');
+		Configure::write('Copula.testapi.Auth.authMethod', 'OAuth');
 		$ds->setConfig(array('authMethod' => 'OAuth'));
 		$response = new HttpSocketResponse();
 		$response->code = 200;
@@ -130,9 +134,10 @@ class OauthComponentTest extends CakeTestCase {
 		$ds->Http->expects($this->once())
 				->method('request')
 				->will($this->returnValue($response));
-		$this->Oauth->connect('testapi');
-		$expected = "https://accounts.example.com/oauth2/auth?oauth_token=abcdef";
-		$this->assertEquals($expected, $this->controller->redirect);
+		$results = $this->Oauth->beforeRedirect($this->controller, 'someurl');
+		$expected = array("https://accounts.example.com/oauth2/auth?oauth_token=abcdef");
+		$this->assertEquals($expected, $results);
+		$this->assertEmpty($this->controller->Apis['testapi']);
 	}
 
 	function testCallbackV2() {
@@ -159,8 +164,8 @@ class OauthComponentTest extends CakeTestCase {
 
 	function testCallbackV1() {
 		$ds = ConnectionManager::getDataSource('testapiToken');
-		$ds->setConfig(array('authMethod' => 'OAuth'));
-		ConnectionManager::getDataSource('testapi')->setConfig(array('authMethod' => 'OAuth'));
+		Configure::write('Copula.testapi.Auth.authMethod', 'OAuth');
+		ConnectionManager::getDataSource('testapiToken')->setConfig(array('authMethod' => 'OAuth'));
 		$response = new HttpSocketResponse();
 		$response->code = 200;
 		$response->body = http_build_query(array('oauth_token' => 'abcdef', 'oauth_token_secret' => 'TheTruthIsOutThere'));
@@ -184,6 +189,101 @@ class OauthComponentTest extends CakeTestCase {
 			'oauth_token_secret' => 'TheTruthIsOutThere');
 		$this->assertEquals($expected, $token);
 		CakeSession::delete('Auth.User.id');
+	}
+
+	public function testCallbackV2NoCodeException() {
+		$this->expectException('CakeException', 'Authorization token for API noApi not received.');
+		$collect = new ComponentCollection();
+		$this->Oauth = $this->getMock('OauthComponent', array('getOauthMethod'), array($collect));
+		$this->Oauth->expects($this->once())
+				->method('getOauthMethod')
+				->will($this->returnValue('OAuthV2'));
+		$this->Oauth->controller->request = new CakeRequest();
+		$this->Oauth->callback('noApi');
+	}
+
+	public function testCallbackV1NoCodeException() {
+		$collect = new ComponentCollection();
+		$this->Oauth = $this->getMock('OauthComponent', array('getOauthMethod'), array($collect));
+		$this->Oauth->expects($this->once())
+				->method('getOauthMethod')
+				->will($this->returnValue('OAuth'));
+		$this->Oauth->controller->request = new CakeRequest();
+		$this->expectException('CakeException', 'Oauth verification code for API noApi not found.');
+		$this->Oauth->callback('noApi');
+	}
+
+	public function testCallbackV1NoRequestTokenException() {
+		$collect = new ComponentCollection();
+		$this->Oauth = $this->getMock('OauthComponent', array('getOauthMethod'), array($collect));
+		$this->Oauth->expects($this->once())
+				->method('getOauthMethod')
+				->will($this->returnValue('OAuth'));
+		$this->Oauth->controller->request = new CakeRequest();
+		$this->Oauth->controller->request->query = array('oauth_verifier' => 'verified');
+		$this->expectException('CakeException', 'Request token for API noApi not found in Session.');
+		$this->Oauth->callback('noApi');
+	}
+
+	public function testCallbackV2NoTokenException() {
+		$this->expectException('CakeException', 'Could not get OAuthV2 Access Token from noApi');
+		$collect = new ComponentCollection();
+		$this->Oauth = $this->getMock('OauthComponent', array('getOauthMethod', 'getAccessTokenV2'), array($collect));
+		$this->Oauth->expects($this->once())
+				->method('getOauthMethod')
+				->will($this->returnValue('OAuthV2'));
+		$this->Oauth->controller->request = new CakeRequest();
+		$this->Oauth->controller->request->query = array('code' => 'accessCode');
+		$this->Oauth->expects($this->once())
+				->method('getAccessTokenV2')
+				->will($this->returnValue(false));
+		$this->Oauth->callback('noApi');
+	}
+
+	public function testAfterRequestRedirect() {
+		$this->controller->request->query = array('code' => 'tanstaafl');
+		$ds = ConnectionManager::getDataSource('testapiToken');
+		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires_in' => '3600'));
+		$response->headers['Content-Type'] = 'application/json; charset utf-8';
+		$ds->Http->expects($this->once())
+				->method('request')
+				->will($this->returnValue($response));
+		CakeSession::write('Auth.User.id', '42');
+		CakeSession::write('Oauth.redirect', 'someurl');
+		$this->Oauth->callback('testapi');
+		$this->assertEquals('someurl', $this->Oauth->controller->redirect);
+		CakeSession::delete('Auth.User.id');
+		CakeSession::delete('Oauth.redirect');
+	}
+
+	public function testAfterRequestNoStoreException() {
+		$collect = new ComponentCollection();
+		$this->Oauth = $this->getMock('OauthComponent', array('store'), array($collect));
+		$this->Oauth->expects($this->once())
+				->method('store')
+				->will($this->returnValue(false));
+		$this->Oauth->controller->request = new CakeRequest();
+		$this->Oauth->controller->request->query = array('code' => 'accessCode');
+		$ds = ConnectionManager::getDataSource('testapiToken');
+		$ds->Http = $this->getMock('HttpSocketOauth', array('request'));
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('access_token' => 'sayThe', 'refresh_token' => 'magicWord', 'type' => 'bearer', 'expires_in' => '3600'));
+		$response->headers['Content-Type'] = 'application/json; charset utf-8';
+		$ds->Http->expects($this->once())
+				->method('request')
+				->will($this->returnValue($response));
+		$this->expectException('CakeException', 'Could not store access token for API testapi');
+		$this->Oauth->callback('testapi');
+	}
+
+	public function testStoreException() {
+		$this->Oauth->controller->Apis = array('testapi' => array('store' => 'safeway'));
+		$this->expectException('CakeException', 'Storage Method: Safeway not supported.');
+		$this->Oauth->store(array(), 'testapi', 'OAuthV2');
 	}
 
 }

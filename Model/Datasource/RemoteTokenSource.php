@@ -1,7 +1,7 @@
 <?php
 
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'Copula.Lib');
+App::uses('HttpSocketOauth', 'Copula.Network/Http');
 
 class RemoteTokenSource extends DataSource {
 

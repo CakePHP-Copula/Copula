@@ -9,7 +9,7 @@
  * @author Dean Sofer
  * */
 App::uses('DataSource', 'Model/Datasource');
-App::uses('HttpSocketOauth', 'Copula.Lib');
+App::uses('HttpSocketOauth', 'Copula.Network/Http');
 App::uses('HttpSocket', 'Network/Http');
 
 class ApisSource extends DataSource {
@@ -54,7 +54,7 @@ class ApisSource extends DataSource {
 	protected $_baseConfig = array(
 		'format' => 'json',
 		'escape' => 'false',
-		'authMethod' => 'Basic'
+		'authMethod' => 'OAuthV2'
 	);
 
 	/**
@@ -69,12 +69,14 @@ class ApisSource extends DataSource {
 	);
 
 	/**
+	 * Returns the appropriate transport object for the datasource.
 	 *
+	 * @param string $authMethod 'OAuth' or 'OAuthV2' return HttpSocketOauth object
 	 * @param string|array $url url or array of config options
 	 * @return \HttpSocketOauth|\HttpSocket
 	 */
-	public function getHttpObject($url = null) {
-		switch ($this->config['authMethod']) {
+	public function getHttpObject($authMethod, $url = null) {
+		switch ($authMethod) {
 			case 'OAuth':
 			case 'OAuthV2':
 				$Http = new HttpSocketOauth($url);
@@ -94,10 +96,10 @@ class ApisSource extends DataSource {
 	public function describe(\Model $model) {
 		if (!empty($model->schema)) {
 			$schema = $model->schema;
-		} elseif (!empty($this->_schema)) {
-			$schema = $this->_schema;
-		} elseif (!empty($this->map)) {
-			$schema = $this->map;
+		} elseif (!empty($this->_schema[$model->name])) {
+			$schema = $this->_schema[$model->name];
+		} elseif (!empty($this->map[$model->useDbConfig])) {
+			$schema = $this->map[$model->useDbConfig];
 		} else {
 			return null;
 		}
@@ -117,15 +119,27 @@ class ApisSource extends DataSource {
 		return $query;
 	}
 
-	protected function _buildRequest($apiName, $type = 'read') {
+	/**
+	 * In an ideal world, this would construct a HttpRequest object. Such will likely be the case in CakePHP 3.0
+	 *
+	 * Currently it returns an array of values to be passed to HttpSocket.
+	 *
+	 * @param string $apiName
+	 * @param string $type
+	 * @param array  $request
+	 * @return array
+	 */
+	protected function _buildRequest($apiName, $type = 'read', $request = array()) {
 		if (empty($this->map)) {
 			$this->map = Configure::read("Copula.$apiName.path");
 		}
-		$request = array();
+		$host = Configure::read("Copula.$apiName.Api");
+		if (is_array($host)) {
+			$this->setConfig($host);
+		}
 		$request['method'] = $this->restMap[$type];
-		$request['uri']['host'] = $this->map['host'];
+		$request['uri']['host'] = $this->config['host'];
 		$request['auth'] = $this->_getAuth($this->config['authMethod'], $apiName);
-		//$scheme = Configure::read("Copula.$apiName.oauth.scheme");
 		if (!empty($this->config['scheme'])) {
 			$request['uri']['scheme'] = $this->config['scheme'];
 		}
@@ -138,8 +152,13 @@ class ApisSource extends DataSource {
 	 * @return null
 	 */
 	public function listSources($data = null) {
-		if (!empty($this->map->create)) {
-			return array_keys($this->map->create);
+		if (!empty($this->map)) {
+			foreach ($this->map as $section) {
+				foreach ($section as $endpoint => $contents) {
+					$endpoints[] = $endpoint;
+				}
+			}
+			return array_unique($endpoints);
 		} else {
 			return null;
 		}
@@ -164,7 +183,7 @@ class ApisSource extends DataSource {
 			$model->request = $this->beforeRequest($model);
 		}
 
-		$Http = $this->getHttpObject();
+		$Http = $this->getHttpObject($this->config['authMethod']);
 		$t = microtime(true);
 
 		$Http->request($model->request);
@@ -307,16 +326,17 @@ class ApisSource extends DataSource {
 	protected function _scanMap($action, $section, $fields = array()) {
 		if (!isset($this->map[$action][$section])) {
 			throw new CakeException(__('Section %s not found in Copula Driver Configuration Map - ', $section) . get_class($this), 500);
-		}
-		$map = $this->map[$action][$section];
-		foreach ($map as $path => $conditions) {
-			$optional = (isset($conditions['optional'])) ? $conditions['optional'] : array();
-			unset($conditions['optional']);
-			if (array_intersect($fields, $conditions) == $conditions) {
-				return array($path, $conditions, $optional);
+		} else {
+			$map[] = $this->map[$action][$section];
+			foreach ($map as $element) {
+				$path = $required = $optional = null;
+				extract($element);
+				if (array_intersect($fields, $required) == $required) {
+					return compact('path', 'required', 'optional');
+				}
 			}
+			throw new CakeException(__('[ApiSource] Could not find a match for passed conditions'), 500);
 		}
-		throw new CakeException(__('[ApiSource] Could not find a match for passed conditions'), 500);
 	}
 
 	/**
@@ -355,8 +375,7 @@ class ApisSource extends DataSource {
 	}
 
 	/**
-	 * Uses standard find conditions. Use find('all', $params). Since you cannot pull specific fields,
-	 * we will instead use 'fields' to specify what table to pull from.
+	 * Uses standard find conditions. Use find('all', $params).
 	 *
 	 * @param string $model The model being read.
 	 * @param string $queryData An array of query data used to find the data you want
@@ -367,19 +386,14 @@ class ApisSource extends DataSource {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
-		if (empty($queryData['section'])) {
-			$queryData['section'] = $model->useTable;
-		}
 		$queryData['conditions'] = (isset($queryData['conditions'])) ? $queryData['conditions'] : array();
 		$model->request = $this->_buildRequest($model->useDbConfig, 'read');
-		if (!empty($queryData['path'])) {
-			$model->request['uri']['path'] = $queryData['path'];
-		} else {
-			$scan = $this->_scanMap('read', $queryData['section'], array_keys($queryData['conditions']));
-			$model->request['uri']['path'] = $scan[0];
-			$queryData['conditions'] = array_intersect(array_keys($queryData['conditions']), array_merge($scan[1], $scan[2]));
-		}
-		$model->request['uri']['query'] = $this->_buildQuery($queryData['conditions']);
+		$scan = $this->_scanMap('read', $model->useTable, array_keys($queryData['conditions']));
+		$required = $optional = array();
+		extract($scan);
+		$model->request['uri']['path'] = $path;
+		$conditions = array_intersect(array_keys($queryData['conditions']), array_merge($required, $optional));
+		$model->request['uri']['query'] = $this->_buildQuery($conditions);
 		return $this->request($model);
 	}
 
@@ -393,11 +407,8 @@ class ApisSource extends DataSource {
 	public function create(Model $model, $fields = null, $values = null) {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
-		if ($scan) {
-			$model->request['uri']['path'] = $scan[0];
-		} else {
-			return false;
-		}
+		extract($scan);
+		$model->request['uri']['path'] = $path;
 		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape']);
 		return $this->request($model);
 	}
@@ -411,14 +422,9 @@ class ApisSource extends DataSource {
 	 */
 	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'update');
-		if (!empty($this->map['update']) && in_array('section', $fields)) {
-			$scan = $this->_scanMap('write', $fields['section'], $fields);
-			if ($scan) {
-				$model->request['uri']['path'] = $scan[0];
-			} else {
-				return false;
-			}
-		}
+		$scan = $this->_scanMap('update', $model->useTable, $fields);
+		extract($scan);
+		$model->request['uri']['path'] = $path;
 		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape']);
 		return $this->request($model);
 	}
@@ -429,8 +435,12 @@ class ApisSource extends DataSource {
 	 * @param AppModel $model
 	 * @param mixed $id Unused
 	 */
-	public function delete(Model $model, $id = null) {
-		$this->_buildRequest($model->useDbConfig, 'delete');
+	public function delete(Model $model, $conditions = null) {
+		$model->request = $this->_buildRequest($model->useDbConfig, 'delete');
+		$scan = $this->_scanMap('delete', $model->useTable, array_keys($conditions));
+		extract($scan);
+		$model->request['uri']['path'] = $path;
+		$model->request['body'] = $this->_buildQuery($conditions, $this->config['escape']);
 		return $this->request($model);
 	}
 
