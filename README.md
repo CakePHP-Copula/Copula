@@ -1,4 +1,4 @@
-![Copula logo](http://img.photobucket.com/albums/v295/Tenebrous/Copula/g19853_zpse24d2c1e.png)
+![Copula logo](http://img.photobucket.com/albums/v295/Tenebrous/Copula/copula-logo_zps9cf00474.jpg)
 #Copula - bringing it all together
 
 Copula is a CakePHP plugin for interacting with remote APIs like Facebook and Google. It takes care of all the boring details: you don't have to worry about connecting to the service or storing access tokens.
@@ -22,7 +22,7 @@ In addition, Copula is well-tested, and working towards 100% code coverage.
 
 ##Implementations
 
-Copula has recently been rewritten and is necessarily incompatible with any plugins using the upstream project. Relations between this project and the upstream one are cordial but somewhat undefined as yet. The code has been tested to work with Twitter (OAuth v1) and Google Cloud Print (OAuth v2). You may expect this section to be expanded shortly.
+Copula has recently been rewritten and is necessarily incompatible with any plugins using previous versions. The code has been tested to work with Twitter (OAuth v1) and Google Cloud Print (OAuth v2). You may expect this section to be expanded shortly.
 
 ##License
 
