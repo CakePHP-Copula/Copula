@@ -2,7 +2,6 @@
 
 App::uses('TokenSource', 'Copula.Model');
 App::uses('TokenStoreDb', 'Copula.Model');
-App::uses('OauthConfig', 'Copula.Lib');
 App::uses('CakeSession', 'Model/Datasource');
 
 /**
@@ -17,25 +16,36 @@ class OauthComponent extends Component {
 
 	function __construct(\ComponentCollection $collection, $settings = array()) {
 		$this->TokenSource = ClassRegistry::init('Copula.TokenSource');
+		//if we get more settings, we'll use array_merge
+		if (!isset($settings['autoAuth'])) {
+			$settings['autoAuth'] = true;
+		}
 		parent::__construct($collection, $settings);
 	}
 
 	function beforeRedirect(\Controller $controller, $url, $status = null, $exit = true) {
-		$failed = $this->_checkAuthFailure($controller);
-		if (!empty($failed)) {
-			return false;
+		if ($this->settings['autoAuth']) {
+			$failed = $this->_checkAuthFailure($controller);
+			if (!empty($failed)) {
+				CakeSession::write('Oauth.redirect', $controller->request->here);
+				$apiName = array_pop($failed);
+				unset($this->controller->Apis[$apiName]['authorized']);
+				$method = $this->getOauthMethod($apiName);
+				if ($method == 'OAuthV2') {
+					$uri = $this->authorizeV2($apiName);
+					return array($uri);
+				} elseif ($method == 'OAuth') {
+					$token = $this->getOauthRequestToken($apiName);
+					$this->Session->write("Oauth.$apiName.request_token", $token);
+					$uri = $this->authorize($apiName, $token['oauth_token']);
+					return array($uri);
+				}
+			}
 		}
 	}
 
 	function startup(\Controller $controller) {
 		$this->controller = $controller;
-		$failed = $this->_checkAuthFailure($controller);
-		if (!empty($failed)) {
-			CakeSession::write('Oauth.redirect', $controller->request->here);
-			$apiName = array_pop($failed);
-			unset($this->controller->Apis[$apiName]['authorized']);
-			return $this->connect($apiName);
-		}
 	}
 
 	protected function _checkAuthFailure(Controller $controller) {
@@ -50,6 +60,28 @@ class OauthComponent extends Component {
 		}
 	}
 
+	function getOauthUri($apiName, $path, $extra = array()) {
+		if (Configure::check('Copula.' . $apiName . '.Auth')) {
+			$config = Configure::read('Copula.' . $apiName . '.Auth');
+			if ($config['authMethod'] == 'OAuth') {
+				return $config['scheme'] . '://' . $config['host'] . '/' . $config[$path];
+			} elseif ($config['authMethod'] == 'OAuthV2') {
+				$uri = $config['scheme'] . '://' . $config['host'] . '/' . $config[$path];
+				$query = array('redirect_uri' => $config['callback'], 'client_id' => ConnectionManager::getDataSource($apiName)->config['login']);
+				if (!empty($config['scope'])) {
+					$query['scope'] = $config['scope'];
+				}
+				return $uri . Router::queryString($query, $extra);
+			}
+		} else {
+			return false;
+		}
+	}
+
+	function getOauthMethod($apiName) {
+		return Configure::read('Copula.' . $apiName . '.Auth.authMethod');
+	}
+
 	/**
 	 *
 	 * @param string $apiName
@@ -58,8 +90,8 @@ class OauthComponent extends Component {
 	 */
 	public function authorize($apiName, $requestToken, $extra = array()) {
 		$query = Router::queryString(array('oauth_token' => $requestToken), $extra);
-		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize');
-		$this->controller->redirect($uri . $query);
+		$uri = $this->getOauthUri($apiName, 'authorize');
+		return $uri . $query;
 	}
 
 	/**
@@ -72,8 +104,8 @@ class OauthComponent extends Component {
 			'response_type' => 'code',
 			'access_type' => 'offline',
 				), $requestOptions);
-		$uri = OauthConfig::getAuthUri($apiName . 'Token', 'authorize', $options);
-		$this->controller->redirect($uri);
+		$uri = $this->getOauthUri($apiName, 'authorize', $options);
+		return $uri;
 	}
 
 	/**
@@ -124,33 +156,10 @@ class OauthComponent extends Component {
 	/**
 	 *
 	 * @param string $apiName
-	 */
-	function connect($apiName) {
-		$method = OauthConfig::isOauthApi($apiName . 'Token');
-		if ($method) {
-			if ($method == 'OAuthV2') {
-				$this->authorizeV2($apiName);
-			} else {
-				$token = $this->getOauthRequestToken($apiName);
-				if ($token) {
-					$this->Session->write("Oauth.$apiName.request_token", $token);
-					$this->authorize($apiName, $token['oauth_token']);
-				} else {
-					throw new CakeException(__('No Request Token is present for the %s API.', $apiName));
-				}
-			}
-		} else {
-			return false;
-		}
-	}
-
-	/**
-	 *
-	 * @param string $apiName
 	 * @throws CakeException
 	 */
 	function callback($apiName) {
-		$method = OauthConfig::isOauthApi($apiName . 'Token');
+		$method = $this->getOauthMethod($apiName);
 		if ($method == 'OAuthV2') {
 			$code = $this->controller->request->query('code');
 			if (empty($code)) {

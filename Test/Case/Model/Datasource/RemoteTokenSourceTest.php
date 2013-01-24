@@ -1,7 +1,7 @@
 <?php
 
 App::uses('RemoteTokenSource', 'Copula.Model/Datasource');
-App::uses('HttpSocketOauth', 'Copula.Lib');
+App::uses('HttpSocketOauth', 'Copula.Network/Http');
 App::uses('Model', 'Model');
 App::uses('HttpSocketResponse', 'Network/Http');
 

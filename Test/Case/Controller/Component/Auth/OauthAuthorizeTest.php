@@ -7,9 +7,12 @@ App::uses('TokenStoreDb', 'Copula.Model');
 App::uses('TokenStoreSession', 'Copula.Model');
 App::uses('Controller', 'Controller');
 
-class FakeController extends Controller{
+class FakeController extends Controller {
+
 	public $Apis = array('testapi');
+
 }
+
 /**
  * @property OauthAuthorize $auth
  */
@@ -55,26 +58,33 @@ class OauthAuthorizeTestCase extends CakeTestCase {
 		$this->assertTrue($this->auth->authorize($user, $this->request));
 		$this->assertTrue($this->controller->Apis['testapi']['authorized']);
 	}
-/*
-	public function testAuthorizeNoDb() {
-		unset($this->auth->Token);
-		$this->auth->Token = $this->getMock('Token');
-		$this->auth->Token->expects($this->any())
-				->method('getToken')
-				->will($this->returnValue(array()));
-		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
+
+	public function testAuthorizeNoStoreSet() {
+		$user = array('id' => '1');
+		$this->assertFalse($this->auth->authorize($user, $this->request));
+		$this->assertFalse($this->controller->Apis['testapi']['authorized']);
 	}
 
-	public function testAuthorizeNoSession() {
-		$this->auth->settings['Apis']['testapi']['store'] = 'Session';
-		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
-	}
+	/*
+	  public function testAuthorizeNoDb() {
+	  unset($this->auth->Token);
+	  $this->auth->Token = $this->getMock('Token');
+	  $this->auth->Token->expects($this->any())
+	  ->method('getToken')
+	  ->will($this->returnValue(array()));
+	  $this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
+	  }
 
-	public function testAuthorizeNoCookie() {
-		$this->auth->settings['Apis']['testapi']['store'] = 'Cookie';
-		$this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
-	}
-*/
+	  public function testAuthorizeNoSession() {
+	  $this->auth->settings['Apis']['testapi']['store'] = 'Session';
+	  $this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
+	  }
+
+	  public function testAuthorizeNoCookie() {
+	  $this->auth->settings['Apis']['testapi']['store'] = 'Cookie';
+	  $this->assertFalse($this->auth->authorize(array('id' => '1'), $this->request));
+	  }
+	 */
 }
 
 ?>

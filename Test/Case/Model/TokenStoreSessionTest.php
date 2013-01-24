@@ -2,7 +2,7 @@
 
 App::uses('CakeSession', 'Model/Datasource');
 App::uses('TokenStoreSession', 'Copula.Model');
-App::uses('HttpSocketOauth', 'Copula.Lib');
+App::uses('HttpSocketOauth', 'Copula.Network/Http');
 App::uses('HttpSocketResponse', 'Network/Http');
 
 /**

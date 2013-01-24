@@ -2,7 +2,6 @@
 
 App::uses('BaseAuthorize', 'Controller/Component/Auth');
 App::uses('Token', 'Copula.Model');
-App::uses('OauthConfig', 'Copula.Lib');
 
 /**
  * @property Token $Token

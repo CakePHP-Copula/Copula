@@ -1,9 +1,11 @@
 <?php
+
 App::uses('CopulaAppModel', 'Copula.Model');
 
 class TokenSource extends CopulaAppModel {
 
 	public $findMethods = array('request' => true, 'access' => true);
+
 	public $useTable = false;
 
 	public function buildQuery($type = 'access', $query = array()) {
@@ -32,20 +34,30 @@ class TokenSource extends CopulaAppModel {
 
 	protected function _findRequest($state, $query, $results = array()) {
 		if ($state == 'before') {
-			$this->switchDbConfig($query['api'] . 'Token');
-			unset($query['api']);
-			return $query;
+			return $this->beforeQuery($query);
 		}
 		return $results;
 	}
 
 	protected function _findAccess($state, $query, $results = array()) {
 		if ($state == 'before') {
-			$this->switchDbConfig($query['api'] . 'Token');
-			unset($query['api']);
-			return $query;
+			return $this->beforeQuery($query);
 		}
 		return $results;
+	}
+
+	public function beforeQuery($query) {
+		$api = $query['api'];
+		if (isset(ConnectionManager::$config->{$api}) && !isset(ConnectionManager::$config->{$api . 'Token'})) {
+			$static = Configure::read("Copula.$api.Auth");
+			$datasourceConfig =ConnectionManager::getDataSource($api)->config;
+			$config = array_merge($datasourceConfig, $static);
+			$config['datasource'] = 'Copula.RemoteTokenSource';
+			ConnectionManager::create($api . 'Token', $config);
+		}
+		$this->switchDbConfig($api . 'Token');
+		unset($query['api']);
+		return $query;
 	}
 
 	public function switchDbConfig($new) {
