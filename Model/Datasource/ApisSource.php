@@ -11,56 +11,59 @@
 App::uses('DataSource', 'Model/Datasource');
 App::uses('HttpSocketOauth', 'Copula.Network/Http');
 App::uses('HttpSocket', 'Network/Http');
+App::uses('Hash', 'Utility');
 
 class ApisSource extends DataSource {
 
-	/**
-	 * The description of this data source
-	 *
-	 * @var string
-	 */
+/**
+ * The description of this data source
+ *
+ * @var string
+ */
 	public $description = 'Apis DataSource';
 
-	/**
-	 * Holds the datasource configuration
-	 *
-	 * @var array
-	 */
+/**
+ * Holds the datasource configuration
+ *
+ * @var array
+ */
 	public $config = array();
 
-	/**
-	 * Request Logs
-	 *
-	 * @var array
-	 * @access protected
-	 */
+/**
+ * Request Logs
+ *
+ * @var array
+ * @access protected
+ */
 	protected $_requestLog = array();
 
-	/**
-	 * Request Log limit per entry in bytes
-	 *
-	 * @var integer
-	 * @access protected
-	 */
+/**
+ * Request Log limit per entry in bytes
+ *
+ * @var integer
+ * @access protected
+ */
 	protected $_logLimitBytes = 5000;
 
-	/**
-	 * Holds a configuration map
-	 *
-	 * @var array
-	 */
+/**
+ * Holds a configuration map
+ *
+ * @var array
+ */
 	public $map = array();
+
 	protected $_sources = null;
+
 	protected $_baseConfig = array(
 		'format' => 'json',
 		'escape' => 'false',
 		'authMethod' => 'OAuthV2'
 	);
 
-	/**
-	 * Stores mapping of db actions to http methods
-	 * @var type
-	 */
+/**
+ * Stores mapping of db actions to http methods
+ * @var type
+ */
 	public $restMap = array(
 		'create' => 'POST',
 		'read' => 'GET',
@@ -68,13 +71,13 @@ class ApisSource extends DataSource {
 		'delete' => 'DELETE'
 	);
 
-	/**
-	 * Returns the appropriate transport object for the datasource.
-	 *
-	 * @param string $authMethod 'OAuth' or 'OAuthV2' return HttpSocketOauth object
-	 * @param string|array $url url or array of config options
-	 * @return \HttpSocketOauth|\HttpSocket
-	 */
+/**
+ * Returns the appropriate transport object for the datasource.
+ *
+ * @param string $authMethod 'OAuth' or 'OAuthV2' return HttpSocketOauth object
+ * @param string|array $url url or array of config options
+ * @return \HttpSocketOauth|\HttpSocket
+ */
 	public function getHttpObject($authMethod, $url = null) {
 		switch ($authMethod) {
 			case 'OAuth':
@@ -88,11 +91,11 @@ class ApisSource extends DataSource {
 		return $Http;
 	}
 
-	/**
-	 *
-	 * @param \Model $model
-	 * @return mixed
-	 */
+/**
+ *
+ * @param \Model $model
+ * @return mixed
+ */
 	public function describe(\Model $model) {
 		if (!empty($model->schema)) {
 			$schema = $model->schema;
@@ -106,12 +109,12 @@ class ApisSource extends DataSource {
 		return $schema;
 	}
 
-	/**
-	 *
-	 * @param string|array $query array of params to be converted
-	 * @param boolean $escape whether to escape the separator
-	 * @return string string containing query
-	 */
+/**
+ *
+ * @param string|array $query array of params to be converted
+ * @param boolean $escape whether to escape the separator
+ * @return string string containing query
+ */
 	protected function _buildQuery($query, $escape = false) {
 		if (is_array($query)) {
 			$query = substr(Router::queryString($query, array(), $escape), '1');
@@ -119,16 +122,16 @@ class ApisSource extends DataSource {
 		return $query;
 	}
 
-	/**
-	 * In an ideal world, this would construct a HttpRequest object. Such will likely be the case in CakePHP 3.0
-	 *
-	 * Currently it returns an array of values to be passed to HttpSocket.
-	 *
-	 * @param string $apiName
-	 * @param string $type
-	 * @param array  $request
-	 * @return array
-	 */
+/**
+ * In an ideal world, this would construct a HttpRequest object. Such will likely be the case in CakePHP 3.0
+ *
+ * Currently it returns an array of values to be passed to HttpSocket.
+ *
+ * @param string $apiName
+ * @param string $type
+ * @param array  $request
+ * @return array
+ */
 	protected function _buildRequest($apiName, $type = 'read', $request = array()) {
 		if (empty($this->map)) {
 			$this->map = Configure::read("Copula.$apiName.path");
@@ -146,11 +149,11 @@ class ApisSource extends DataSource {
 		return $request;
 	}
 
-	/**
-	 *
-	 * @param type $data
-	 * @return null
-	 */
+/**
+ *
+ * @param type $data
+ * @return null
+ */
 	public function listSources($data = null) {
 		if (!empty($this->map)) {
 			foreach ($this->map as $section) {
@@ -164,16 +167,16 @@ class ApisSource extends DataSource {
 		}
 	}
 
-	/**
-	 * Sends HttpSocket requests. Builds your uri and formats the response too.
-	 *
-	 * @param string $params
-	 * @param array $options
-	 * 		method: get, post, delete, put
-	 * 		data: either in string form: "option1=foo&option2=bar" or as a keyed array: array('option1' => 'foo', 'option2' => 'bar')
-	 * @return HttpSocketResponse $response
-	 * @author Dean Sofer
-	 */
+/**
+ * Sends HttpSocket requests. Builds your uri and formats the response too.
+ *
+ * @param string $params
+ * @param array $options
+ * 		method: get, post, delete, put
+ * 		data: either in string form: "option1=foo&option2=bar" or as a keyed array: array('option1' => 'foo', 'option2' => 'bar')
+ * @return HttpSocketResponse $response
+ * @author Dean Sofer
+ */
 	public function request(Model $model) {
 		if (!empty($this->tokens)) {
 			$model->request['uri']['path'] = $this->_swapTokens($model->request['uri']['path'], $this->tokens);
@@ -196,12 +199,12 @@ class ApisSource extends DataSource {
 		return $model->response;
 	}
 
-	/**
-	 *
-	 * @param type $query
-	 * @param \HttpSocketResponse $response
-	 * @return void
-	 */
+/**
+ *
+ * @param type $query
+ * @param \HttpSocketResponse $response
+ * @return void
+ */
 	public function logQuery(\HttpSocket $Socket) {
 		if (Configure::read('debug')) {
 			$logItems = array($Socket->request['raw'], $Socket->response->raw);
@@ -219,11 +222,11 @@ class ApisSource extends DataSource {
 		}
 	}
 
-	/**
-	 *
-	 * @param type $method
-	 * @return array
-	 */
+/**
+ *
+ * @param type $method
+ * @return array
+ */
 	protected function _getAuth($method, $apiName) {
 		switch ($method) {
 			case 'Basic':
@@ -259,13 +262,13 @@ class ApisSource extends DataSource {
 		return array_filter($auth);
 	}
 
-	/**
-	 * Decodes the response based on the content type
-	 *
-	 * @param \HttpSocketResponse $response
-	 * @return array $response
-	 * @author Dean Sofer
-	 */
+/**
+ * Decodes the response based on the content type
+ *
+ * @param \HttpSocketResponse $response
+ * @return array $response
+ * @author Dean Sofer
+ */
 	public function decode(\HttpSocketResponse $response) {
 		// Get content type header
 		$contentType = explode(';', $response->getHeader('Content-Type'));
@@ -297,14 +300,14 @@ class ApisSource extends DataSource {
 		return $return;
 	}
 
-	/**
-	 * Iterates through the tokens (passed or request items) and replaces them into the url
-	 *
-	 * @param string $url
-	 * @param array $tokens optional
-	 * @return string $url
-	 * @author Dean Sofer
-	 */
+/**
+ * Iterates through the tokens (passed or request items) and replaces them into the url
+ *
+ * @param string $url
+ * @param array $tokens optional
+ * @return string $url
+ * @author Dean Sofer
+ */
 	protected function _swapTokens($url, $tokens = array()) {
 		$formattedTokens = array();
 		foreach ($tokens as $token => $value) {
@@ -314,38 +317,38 @@ class ApisSource extends DataSource {
 		return $url;
 	}
 
-	/**
-	 * Tries iterating through the config map of REST commmands to decide which command to use
-	 *
-	 * @param string $action
-	 * @param string $section
-	 * @param array $fields
-	 * @return array
-	 * @author Dean Sofer
-	 */
+/**
+ * Tries iterating through the config map of REST commmands to decide which command to use
+ *
+ * @param string $action
+ * @param string $section
+ * @param array $fields
+ * @return array
+ * @throws CakeException if match not found
+ * @throws CakeException if section not found
+ */
 	protected function _scanMap($action, $section, $fields = array()) {
-		if (!isset($this->map[$action][$section])) {
+		$map = $this->map[$action];
+		if (!Hash::check($map, $section)) {
 			throw new CakeException(__('Section %s not found in Copula Driver Configuration Map - ', $section) . get_class($this), 500);
 		} else {
-			$map[] = $this->map[$action][$section];
-			foreach ($map as $element) {
-				$path = $required = $optional = null;
-				extract($element);
-				if (array_intersect($fields, $required) == $required) {
-					return compact('path', 'required', 'optional');
-				}
+			$element = Hash::extract($map, $section);
+			$path = $required = $optional = null;
+			extract($element);
+			if (array_intersect($fields, $required) == $required) {
+				return compact('path', 'required', 'optional');
 			}
 			throw new CakeException(__('[ApiSource] Could not find a match for passed conditions'), 500);
 		}
 	}
 
-	/**
-	 * Play nice with the DebugKit
-	 *
-	 * @param boolean sorted ignored
-	 * @param boolean clear will clear the log if set to true (default)
-	 * @return array of log requested
-	 */
+/**
+ * Play nice with the DebugKit
+ *
+ * @param boolean sorted ignored
+ * @param boolean clear will clear the log if set to true (default)
+ * @return array of log requested
+ */
 	public function getLog($sorted = false, $clear = true) {
 		$log = $this->_requestLog;
 		if ($clear) {
@@ -354,13 +357,13 @@ class ApisSource extends DataSource {
 		return array('log' => $log, 'count' => count($log), 'time' => 'Unknown');
 	}
 
-	/**
-	 * Just-In-Time callback for any last-minute request modifications
-	 *
-	 * @param Model $model
-	 * @return array
-	 * @author Dean Sofer
-	 */
+/**
+ * Just-In-Time callback for any last-minute request modifications
+ *
+ * @param Model $model
+ * @return array
+ * @author Dean Sofer
+ */
 	public function beforeRequest(Model $model) {
 		return $model->request;
 	}
@@ -374,14 +377,14 @@ class ApisSource extends DataSource {
 		}
 	}
 
-	/**
-	 * Uses standard find conditions. Use find('all', $params).
-	 *
-	 * @param string $model The model being read.
-	 * @param string $queryData An array of query data used to find the data you want
-	 * @return mixed
-	 * @access public
-	 */
+/**
+ * Uses standard find conditions. Use find('all', $params).
+ *
+ * @param string $model The model being read.
+ * @param string $queryData An array of query data used to find the data you want
+ * @return mixed
+ * @access public
+ */
 	public function read(Model $model, $queryData = array()) {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
@@ -397,13 +400,13 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-	/**
-	 * Sets method = POST in request if not already set
-	 *
-	 * @param AppModel $model
-	 * @param array $fields Unused
-	 * @param array $values Unused
-	 */
+/**
+ * Sets method = POST in request if not already set
+ *
+ * @param AppModel $model
+ * @param array $fields Unused
+ * @param array $values Unused
+ */
 	public function create(Model $model, $fields = null, $values = null) {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
@@ -413,13 +416,13 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-	/**
-	 * Sets method = PUT in request if not already set
-	 *
-	 * @param AppModel $model
-	 * @param array $fields Unused
-	 * @param array $values Unused
-	 */
+/**
+ * Sets method = PUT in request if not already set
+ *
+ * @param AppModel $model
+ * @param array $fields Unused
+ * @param array $values Unused
+ */
 	public function update(Model $model, $fields = null, $values = null, $conditions = null) {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'update');
 		$scan = $this->_scanMap('update', $model->useTable, $fields);
@@ -429,12 +432,12 @@ class ApisSource extends DataSource {
 		return $this->request($model);
 	}
 
-	/**
-	 * Sets method = DELETE in request if not already set
-	 *
-	 * @param AppModel $model
-	 * @param mixed $id Unused
-	 */
+/**
+ * Sets method = DELETE in request if not already set
+ *
+ * @param AppModel $model
+ * @param mixed $id Unused
+ */
 	public function delete(Model $model, $conditions = null) {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'delete');
 		$scan = $this->_scanMap('delete', $model->useTable, array_keys($conditions));

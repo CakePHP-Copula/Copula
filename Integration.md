@@ -12,23 +12,23 @@ This code is provided ‘as-is’ with no warranty express or implied. Use at yo
 
 ---
 
-1. [Config](#config)
-    1. [Bootstrap](#bootstrap)
-    2. [Database Config](#database-config)  
-    3. [Hosts](#hosts) 
-    4. [Paths](#paths)
-    5. [Routes](#routes)
+1. [Config](#1-config)
+    1. [Bootstrap](#11-bootstrap)
+    2. [Database](#12-database)  
+    3. [Hosts](#13-hosts) 
+    4. [Paths](#14-paths)
+    5. [Routes](#15-routes)
 
-2. [The Controller Layer](#the-controller-layer)
-    1. [Component Functions](#component-functions)
+2. [The Controller Layer](#2-the-controller-layer)
+    1. [Component Functions](#21-component-functions)
 
-3. [The Model Layer](#the-model-layer)
-    1. [Using APIs in Your Model](#using-apis-in-your-model)
+3. [The Model Layer](#3-the-model-layer)
+    1. [Using APIs in Your Model](#31-using-apis-in-your-model)
 
-4. [The Datasource Layer](#the-datasource-layer)
-    1. [Extending the Datasource](#extending-the-datasource)
+4. [The Datasource Layer](#4-the-datasource-layer)
+    1. [Extending the Datasource](#41-extending-the-datasource)
 
-5. [Further Integration](#further-integration)
+5. [Further Integration](#5-further-integration)
 
 ---
 
@@ -39,9 +39,9 @@ Copula’s configuration follows the normal CakePHP conventions for the most par
 <br />
 <a id="bootstrap"><h3>1.1 Bootstrap</h3></a>
 
-Copula should be loaded as normal in your app’s `bootstrap.php`, using `CakePlugin::load()`. It does not require any routes or a bootstrap file of its own to be loaded.
+Copula should be loaded as normal in your app’s `bootstrap.php`, using `CakePlugin::load()`. It does not require any routes or a bootstrap file of its own to be loaded. If you're creating a plugin, same thing: load Copula in your bootstrap file.
 
-Your code on the other hand will probably need to load two configuration files: one containing your paths, the other containing authorization configuration. A good place to load the files is in the bootstrap file. Copula will not load the paths automatically for you; the way the Configure class is written makes this phenomenally hard to test.
+Your code will probably also need to load two configuration files: one containing your paths, the other containing authorization configuration. A good place to load the files is in the bootstrap file. Copula will not load the paths automatically for you; the way the Configure class is written makes this phenomenally hard to test.
 
 ```php
 
@@ -135,17 +135,15 @@ Internally Copula uses two different datasources in its operation: the first one
 > * [OAuth v1 information](http://developer.yahoo.com/oauth/guide/oauth-auth-flow.html)
 > * [OAuth v2 information](https://developers.google.com/accounts/docs/OAuth2#webserver)
 >
->For the details on how these methods have been implemented, see [Section 2.1 Component Functions](#component-functions).
+>For the details on how these methods have been implemented, see [Section 2.1 Component Functions](#21-component-functions).
 
 <br />
 <a id="paths"><h3>1.4 Paths</h3></a>
 
-Paths are configured in whichever config file you want. For consistency I would recommend using `Config/paths.php`
+Paths are configured in whichever config file you want. For consistency it is recommended to use `YourPlugin/Config/paths.php`
 You are responsible for loading this file (using `Configure::load()`) before the ApisSource datasource needs it. As previously mentioned, `bootstrap.php` is a convenient place for that.
 
-API paths must be ordered from most specific conditions to least (or none). This is because the map is iterated through
-until the first path which has all of its required conditions met is found. If a path has no required conditions, it will
-be used. Optional conditions aren't checked, but are added when building the request.
+Optional conditions aren't checked, but are added when building the request.
 
 ```php
 
@@ -179,6 +177,24 @@ be used. Optional conditions aren't checked, but are added when building the req
 
 Endpoints are selected by the value of `Model::$useTable` for the model making the request. If a specified endpoint does not exist in the paths configuration, an exception will be thrown. As the example above shows, empty arrays do not need to be present.
 
+In the table above, endpoints would be selected by setting `Model::$useTable` to e.g. `'home'` or `'people-search'`. Optionally, you may create arbitrarily deeply nested maps, and use a dot-delimited syntax to select endpoints.
+
+```php
+
+	$config['Copula']['MyPlugin']['read'] = array(
+		'people' => array(
+			'searches' => array(
+				'people-search' => array(
+					'path' => 'people-search',
+					'optional' => array('keywords')
+				)
+			)
+		)
+	);
+
+```
+
+The above would be selected by setting $this->useTable = 'people.searches.people-search'; in your Model file. This can aid in organization for complex API maps.
 <br />
 <a id="routes"><h3>1.5 Routes</h3></a>
 
@@ -192,7 +208,7 @@ Example:
 <br />
 <a id="the-controller-layer"><h2>2. The Controller Layer</h2></a>
 
-The controller-level features of Copula are easy to integrate. The Authorization functions are implemented as a normal CakePHP Authorize object. There are actually some limitations to this by-the-book approach, but it also makes it easy to develop a replacement. For more detail on the subject, see [Section 5. Going Further](#going-further).
+The controller-level features of Copula are easy to integrate. The Authorization functions are implemented as a normal CakePHP Authorize object. There are actually some limitations to this by-the-book approach, but it also makes it easy to develop a replacement. For more detail on the subject, see [Section 5. Going Further](#5-going-further).
 
 Where were we? So you have an Authorize object, which just exists to provide a yes/no answer to "Does this person have some sort of access token?" and a Component that implements all the OAuth functions related to initially getting those tokens. Both of these expect the controller they're attached to to have a public property `$Apis`.
 
@@ -312,7 +328,7 @@ The simplest model configuration would probably look something like the followin
 
 ```
 
-`$useTable` should refer to a section in your path configuration, as defined in [Paths](#paths).
+`$useTable` should refer to a section in your path configuration, as defined in [Paths](#14-paths).
 
 You should be able to use `find()` and `save()` as normal. Updating records *might* work, and deleting records is probably going to take a lot of hacking on the part of the Copula developers, due to the way those things are implemented in CakePHP. Also, they may not even make sense in the context of a given API, so you may be on your own there. Feedback on this subject would be nice.
 
