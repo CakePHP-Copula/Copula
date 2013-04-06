@@ -194,7 +194,7 @@ In the table above, endpoints would be selected by setting `Model::$useTable` to
 
 ```
 
-The above would be selected by setting $this->useTable = 'people.searches.people-search'; in your Model file. This can aid in organization for complex API maps.
+The above would be selected by setting `$this->useTable = 'people.searches.people-search';` in your Model file. This can aid in organization for complex API maps.
 <br />
 <a id="routes"><h3>1.5 Routes</h3></a>
 

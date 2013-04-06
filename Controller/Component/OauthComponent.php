@@ -29,16 +29,16 @@ class OauthComponent extends Component {
 			if (!empty($failed)) {
 				CakeSession::write('Oauth.redirect', $controller->request->here);
 				$apiName = array_pop($failed);
-				unset($this->controller->Apis[$apiName]['authorized']);
+				unset($controller->Apis[$apiName]['authorized']);
 				$method = $this->getOauthMethod($apiName);
 				if ($method == 'OAuthV2') {
 					$uri = $this->authorizeV2($apiName);
-					return array($uri);
+					return $controller->redirect($uri);
 				} elseif ($method == 'OAuth') {
 					$token = $this->getOauthRequestToken($apiName);
 					$this->Session->write("Oauth.$apiName.request_token", $token);
 					$uri = $this->authorize($apiName, $token['oauth_token']);
-					return array($uri);
+					return $controller->redirect($uri);
 				}
 			}
 		}

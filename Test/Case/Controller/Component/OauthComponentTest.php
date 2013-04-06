@@ -117,9 +117,9 @@ class OauthComponentTest extends CakeTestCase {
 
 	function testbeforeRedirectV2() {
 		$this->controller->Apis['testapi']['authorized'] = false;
-		$results = $this->Oauth->beforeRedirect($this->controller, 'some_url');
-		$expected = array("https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline");
-		$this->assertEquals($expected, $results);
+		$this->Oauth->beforeRedirect($this->controller, 'some_url');
+		$expected = "https://accounts.example.com/oauth2/auth?redirect_uri=https%3A%2F%2Flocalhost.local%2Foauth2callback&client_id=login&scope=https%3A%2F%2Fwww.example.com%2Fauth%2F&response_type=code&access_type=offline";
+		$this->assertEquals($expected, $this->controller->redirect);
 		$this->assertEmpty($this->controller->Apis['testapi']);
 	}
 
@@ -134,9 +134,9 @@ class OauthComponentTest extends CakeTestCase {
 		$ds->Http->expects($this->once())
 				->method('request')
 				->will($this->returnValue($response));
-		$results = $this->Oauth->beforeRedirect($this->controller, 'someurl');
-		$expected = array("https://accounts.example.com/oauth2/auth?oauth_token=abcdef");
-		$this->assertEquals($expected, $results);
+		$this->Oauth->beforeRedirect($this->controller, 'someurl');
+		$expected = "https://accounts.example.com/oauth2/auth?oauth_token=abcdef";
+		$this->assertEquals($expected, $this->controller->redirect);
 		$this->assertEmpty($this->controller->Apis['testapi']);
 	}
 
