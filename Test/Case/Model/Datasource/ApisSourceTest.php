@@ -190,6 +190,8 @@ class ApisSourceTest extends CakeTestCase {
 		$this->assertEquals('GET', $model->request['method']);
 		$auth = array('method' => 'OAuth', 'oauth_version' => '2.0', 'client_id' => 'login', 'client_secret' => 'password');
 		$this->assertEquals($auth, $model->request['auth']);
+		$queried = 'field0=value0&field1=value1&field2=value2';
+		$this->assertEquals($queried, $model->request['uri']['query']);
 	}
 
 	public function testReadInvalidSection() {

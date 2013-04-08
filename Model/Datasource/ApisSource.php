@@ -395,7 +395,7 @@ class ApisSource extends DataSource {
 		$required = $optional = array();
 		extract($scan);
 		$model->request['uri']['path'] = $path;
-		$conditions = array_intersect(array_keys($queryData['conditions']), array_merge($required, $optional));
+		$conditions = array_intersect_key($queryData['conditions'], array_flip(array_merge($required, $optional)));
 		$model->request['uri']['query'] = $this->_buildQuery($conditions);
 		return $this->request($model);
 	}
