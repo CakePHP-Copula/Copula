@@ -141,7 +141,10 @@ class ApisSource extends DataSource {
 			$this->setConfig($host);
 		}
 		$request['method'] = $this->restMap[$type];
-		$request['uri']['host'] = $this->config['host'];
+		if(!empty($request['uri']['host'])){
+			$request['uri']['host'] = $this->config['host'];
+		}
+		
 		$request['auth'] = $this->_getAuth($this->config['authMethod'], $apiName);
 		if (!empty($this->config['scheme'])) {
 			$request['uri']['scheme'] = $this->config['scheme'];
@@ -195,8 +198,45 @@ class ApisSource extends DataSource {
 		$this->logQuery($Http);
 
 		$model->response = $this->afterRequest($model, $Http->response);
-
-		return $model->response;
+		$data = $this->cakeModelFormat($model);
+		return $data;
+	}
+	
+/**
+ * formats response into a standard CakePHP formatted array based on useTable var
+ * @param \Model $model
+ * @return array
+ * 
+ */
+	
+	public function cakeModelFormat(Model $model){
+		$modelKeyName = null;
+		
+		if(empty($model->response[$model->useTable])){
+			if(empty($model->response[Inflector::singularize($model->useTable)])){
+				if(!empty($model->response)){
+					$modelKeyName = Inflector::singularize($model->useTable);
+					$model->response = array($modelKeyName => $model->response);
+				}else{
+					return array();
+				}
+			}else{
+				$modelKeyName = Inflector::singularize($model->useTable);
+				
+			}
+		}else{
+			$modelKeyName = $model->useTable;	
+		}
+		
+		$data = array();
+		if(!empty($model->response[$modelKeyName][0])){
+			foreach($model->response[$modelKeyName] as $key=>$record){
+				$data[$key][Inflector::classify($model->useTable)] = $record;
+			}
+		}else{
+			$data[0][Inflector::classify($model->useTable)] = $model->response[$modelKeyName];
+		}
+		return $data;
 	}
 
 /**
@@ -259,7 +299,13 @@ class ApisSource extends DataSource {
 				$auth = null;
 				break;
 		}
-		return array_filter($auth);
+		
+		$filtered = null;
+		if(!empty($auth)){
+			array_filter($auth);
+			$filtered = $auth;
+		}
+		return $filtered;
 	}
 
 /**
@@ -333,7 +379,8 @@ class ApisSource extends DataSource {
 			throw new CakeException(__('Section %s not found in Copula Driver Configuration Map - ', $section) . get_class($this), 500);
 		} else {
 			$element = Hash::extract($map, $section);
-			$path = $required = $optional = null;
+			$path = null;
+			$required = $optional = array();
 			extract($element);
 			if (array_intersect($fields, $required) == $required) {
 				return compact('path', 'required', 'optional');
@@ -376,6 +423,19 @@ class ApisSource extends DataSource {
 			return $this->decode($response);
 		}
 	}
+	
+/**
+ * build a path based on request method
+ * 
+ * made to be overriadable by specific apis so that urls that require a primary key id as
+ * a url param (site.name/34534534/?), rather than a traditional param (?item_id=432323523)
+ * you can parse the query here.
+ * 
+ * 
+ */	
+	protected function _buildPath(Model $model, $request_type = 'read', $path = null, $conditions = array(), $authMethod = 'Oauth'){
+		return $path;
+	}
 
 /**
  * Uses standard find conditions. Use find('all', $params).
@@ -385,7 +445,7 @@ class ApisSource extends DataSource {
  * @return mixed
  * @access public
  */
-	public function read(Model $model, $queryData = array()) {
+	public function read(Model $model, $queryData = array(), $recursive = null) {
 		if (!empty($queryData['fields']) && $queryData['fields'] == 'COUNT') {
 			return array(array(array('count' => 1)));
 		}
@@ -394,10 +454,13 @@ class ApisSource extends DataSource {
 		$scan = $this->_scanMap('read', $model->useTable, array_keys($queryData['conditions']));
 		$required = $optional = array();
 		extract($scan);
-		$model->request['uri']['path'] = $path;
-		$conditions = array_intersect_key($queryData['conditions'], array_flip(array_merge($required, $optional)));
-		$model->request['uri']['query'] = $this->_buildQuery($conditions);
-		return $this->request($model);
+		
+		//$conditions = array_intersect(array_keys($queryData['conditions']), array_merge($required, $optional));
+		$model->request['uri']['path'] = $this->_buildPath($model, 'read', $path, $queryData['conditions']);
+		
+		$model->request['uri']['query'] = $this->_buildQuery($queryData['conditions'],$this->config['escape']);
+		$data = $this->request($model);
+		return $data;
 	}
 
 /**
@@ -408,12 +471,17 @@ class ApisSource extends DataSource {
  * @param array $values Unused
  */
 	public function create(Model $model, $fields = null, $values = null) {
+		
 		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
 		extract($scan);
-		$model->request['uri']['path'] = $path;
-		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape']);
-		return $this->request($model);
+		$model->request['uri']['path'] = $this->_buildPath($model, 'create', $path);
+		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape'], 'create');
+		$data = $this->request($model);
+		if(!empty($data[Inflector::classify($model->useTable)][$model->primaryKey])){
+			$model->id = $data[Inflector::classify($model->useTable)][$model->primaryKey];
+		}
+		return $data;
 	}
 
 /**
@@ -427,8 +495,8 @@ class ApisSource extends DataSource {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'update');
 		$scan = $this->_scanMap('update', $model->useTable, $fields);
 		extract($scan);
-		$model->request['uri']['path'] = $path;
-		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape']);
+		$model->request['uri']['path'] = $this->_buildPath($model, 'update', $path);
+		$model->request['body'] = $this->_buildQuery(array_combine($fields, $values), $this->config['escape'], 'update');
 		return $this->request($model);
 	}
 
@@ -442,8 +510,8 @@ class ApisSource extends DataSource {
 		$model->request = $this->_buildRequest($model->useDbConfig, 'delete');
 		$scan = $this->_scanMap('delete', $model->useTable, array_keys($conditions));
 		extract($scan);
-		$model->request['uri']['path'] = $path;
-		$model->request['body'] = $this->_buildQuery($conditions, $this->config['escape']);
+		$model->request['uri']['path'] = $this->_buildPath($model, 'delete', $path);;
+		$model->request['body'] = $this->_buildQuery($conditions, $this->config['escape'], 'delete');
 		return $this->request($model);
 	}
 
