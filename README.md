@@ -12,6 +12,7 @@ Copula is, in itself, not very useful, and primarily aimed at developers.
 * Supports both OAuth and OAuth v2
 * Access tokens can be stored in the session, or persisted in your database
 * Integrates with CakePHP's built-in Authorization features
+* Multiple login/sub-domain functionality 
 
 In addition, Copula is well-tested, and working towards 100% code coverage.
 
