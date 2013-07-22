@@ -79,6 +79,7 @@ class ApisSource extends DataSource {
  * @return \HttpSocketOauth|\HttpSocket
  */
 	public function getHttpObject($authMethod, $url = null) {
+		
 		switch ($authMethod) {
 			case 'OAuth':
 			case 'OAuthV2':
@@ -96,7 +97,7 @@ class ApisSource extends DataSource {
  * @param \Model $model
  * @return mixed
  */
-	public function describe(\Model $model) {
+	public function describe($model) {
 		if (!empty($model->schema)) {
 			$schema = $model->schema;
 		} elseif (!empty($this->_schema[$model->name])) {
@@ -188,12 +189,11 @@ class ApisSource extends DataSource {
 		if (method_exists($this, 'beforeRequest')) {
 			$model->request = $this->beforeRequest($model);
 		}
-
+		
 		$Http = $this->getHttpObject($this->config['authMethod']);
 		$t = microtime(true);
-
 		$Http->request($model->request);
-
+		
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 		$this->logQuery($Http);
 
@@ -273,8 +273,8 @@ class ApisSource extends DataSource {
 
 				$auth = array(
 					'method' => 'Basic',
-					'login' => $this->config['login'],
-					'password' => $this->config['password']
+					'login' => !empty($this->config['login'])? $this->config['login'] : null,
+					'password' => !empty($this->config['password'])? $this->config['password'] : null,
 				);
 				break;
 			case 'OAuth':
@@ -471,7 +471,6 @@ class ApisSource extends DataSource {
  * @param array $values Unused
  */
 	public function create(Model $model, $fields = null, $values = null) {
-		
 		$model->request = $this->_buildRequest($model->useDbConfig, 'create');
 		$scan = $this->_scanMap('create', $model->useTable, $fields);
 		extract($scan);
