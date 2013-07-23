@@ -198,8 +198,8 @@ class ApisSource extends DataSource {
 		$this->logQuery($Http);
 
 		$model->response = $this->afterRequest($model, $Http->response);
-		$data = $this->cakeModelFormat($model);
-		return $data;
+		
+		return $model->response;
 	}
 	
 /**
@@ -209,32 +209,31 @@ class ApisSource extends DataSource {
  * 
  */
 	
-	public function cakeModelFormat(Model $model){
+	public function cakeModelFormat(Model $model, $body = null){
 		$modelKeyName = null;
 		
-		if(empty($model->response[$model->useTable])){
-			if(empty($model->response[Inflector::singularize($model->useTable)])){
-				if(!empty($model->response)){
-					$modelKeyName = Inflector::singularize($model->useTable);
-					$model->response = array($modelKeyName => $model->response);
+		if(empty($body[$model->useTable])){
+			if(empty($body[Inflector::singularize($model->useTable)])){
+				if(!empty($body)){
+					$modelKeyName = $model->alias;
+					$body = array($modelKeyName => $body);
 				}else{
 					return array();
 				}
 			}else{
-				$modelKeyName = Inflector::singularize($model->useTable);
+				$modelKeyName = $model->alias;
 				
 			}
 		}else{
-			$modelKeyName = $model->useTable;	
+			$modelKeyName = $model->alias;	
 		}
-		
 		$data = array();
-		if(!empty($model->response[$modelKeyName][0])){
-			foreach($model->response[$modelKeyName] as $key=>$record){
-				$data[$key][Inflector::classify($model->useTable)] = $record;
+		if(!empty($body[$modelKeyName][0]) && is_array($body[$modelKeyName][0])){
+			foreach($body[$modelKeyName] as $key=>$record){
+				$data[$key][$modelKeyName] = $record;
 			}
 		}else{
-			$data[0][Inflector::classify($model->useTable)] = $model->response[$modelKeyName];
+			$data[0][$modelKeyName] = $body[$model->useTable];
 		}
 		return $data;
 	}
@@ -315,12 +314,14 @@ class ApisSource extends DataSource {
  * @return array $response
  * @author Dean Sofer
  */
-	public function decode(\HttpSocketResponse $response) {
+	public function decode(\HttpSocketResponse $response, Model $model, $contentType = null) {
 		// Get content type header
-		$contentType = explode(';', $response->getHeader('Content-Type'));
-
+		if($contentType == null){
+			$contentType = explode(';', $response->getHeader('Content-Type'));
+			$contentType = $contentType[0];
+		};
 		// Decode response according to content type
-		switch ($contentType[0]) {
+		switch ($contentType) {
 			case 'application/xml':
 			case 'application/atom+xml':
 			case 'application/rss+xml':
@@ -343,6 +344,7 @@ class ApisSource extends DataSource {
 				$return = $response->body();
 				break;
 		}
+		$return = $this->cakeModelFormat($model, $return);
 		return $return;
 	}
 
@@ -415,12 +417,12 @@ class ApisSource extends DataSource {
 		return $model->request;
 	}
 
-	public function afterRequest(Model &$model, HttpSocketResponse &$response) {
+	public function afterRequest(Model &$model, HttpSocketResponse &$response, $contentType = null) {
 		if (!$response->isOk()) {
 			$model->onError();
 			return false;
 		} else {
-			return $this->decode($response);
+			return $this->decode($response, $model, $contentType);
 		}
 	}
 	
