@@ -198,7 +198,6 @@ class ApisSource extends DataSource {
 		$this->logQuery($Http);
 
 		$model->response = $this->afterRequest($model, $Http->response);
-		
 		return $model->response;
 	}
 	
@@ -233,7 +232,7 @@ class ApisSource extends DataSource {
 				$data[$key][$modelKeyName] = $record;
 			}
 		}else{
-			$data[0][$modelKeyName] = $body[$model->useTable];
+			$data[$modelKeyName] = $body[$model->useTable];
 		}
 		return $data;
 	}
