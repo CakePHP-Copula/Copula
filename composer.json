@@ -1,0 +1,21 @@
+{
+    "name": "copula/copula",
+    "description": "A CakePHP Plugin for developing API-related plugins",
+    "type": "cakephp-plugin",
+    "homepage": "https://github.com/CakePHP-Copula/Copula",
+    "license": "GPLv2 or later",
+    "authors": [
+    	{
+    		"name": "Patrick Leahy",
+    		"role": "Author"
+    	},
+    	{
+    		"name": "Dean Sofer",
+    		"role": "Author"
+    	}
+    ],
+    "require": {
+    	"php": ">=5.3.0",
+    	"composer/installers": "*"
+    }
+}
