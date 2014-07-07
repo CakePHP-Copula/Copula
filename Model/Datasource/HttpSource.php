@@ -127,16 +127,23 @@ class HttpSource extends DataSource {
 		if (!$this->isAuthorized($model, $queryData, $postData)) {
 			throw new CakeException('Unauthorized Request from ' . $model->alias);
 		}
-
+		$endpoint = $model->useTable;
+		if (!isset($this->map[$endpoint][$method])) {
+			throw new NotFoundException("Method $method not found at $endpoint");
+		}
 		//transport layer is first
 		//reason:seems appropriate
-		$endpoint = $model->useTable;
+
 		$client = $this->_getTransport($endpoint);
 		// build the request
 		// the url should be an array after this point, and merged with the baseurl
 		$request = $this->buildRequest($method, $endpoint, $queryData, $postData);
-		if (!$this->validateRequest($method, $request, $queryData, $postData)) {
-			throw new CakeException('Invalid request.');
+		//validate the request
+		if (!empty($this->map[$endpoint][$method])) {
+			$validationRules = $this->map[$endpoint][$method];
+			if (!$request->isValid($validationRules)) {
+				throw new CakeException('Invalid request.');
+			}
 		}
 
 		//beforeRequest event

@@ -158,4 +158,36 @@ class Request extends Message {
 		return $this;
 	}
 
+
+	/**
+	 * Request::isValid()
+	 * This validates either querystring parameters or request body parameters using AppModel and the validation array from $this->map
+	 *
+	 * @param array An array of validation rules
+	 * @return bool Success Whether the request is valid
+	 */
+	public function isValid($validationRules) {
+		$url = $this->url();
+		//If the query is GET, assume all params are querystring
+		//Otherwise assume they are all body params
+		if ($this->method() === 'GET') {
+			$fieldsToValidate = $url['query'];
+		} else {
+			$fieldsToValidate = $this->body();
+		}
+		//we don't really want this class to extend Mode/AppModel
+		//it's not trying to be part of the ORM to that degree, I think
+		//for example, it would be crazy to have relations here
+		//using Validator directly might be nice though
+		$ValidationModel = ClassRegistry::init('AppModel');
+		$ValidationModel->useTable = false;
+		$ValidationModel->create();
+		$ValidationModel->validate = $validationRules;
+		$ValidationModel->set(array('AppModel' => $fieldsToValidate));
+		$ValidationModel->validates();
+		if (!empty($ValidationModel->validationErrors) && Configure::read('debug')) {
+			debug($ValidationModel->validationErrors);
+		}
+		return empty($ValidationModel->validationErrors);
+	}
 }

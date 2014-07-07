@@ -188,5 +188,58 @@ class HttpSourceTest extends CakeTestCase {
 		$this->assertEquals($expected, $authHeader);
 	}
 
+	public function testRequest() {
+		$model = ClassRegistry::init('AppModel');
+		$model->useTable = 'examplepath/endpoint.json';
+		$method = 'GET';
+		$queryData = array('conditions' => array(
+			'name' => 'name',
+			'date' => date('Y-m-d')
+		));
+		$postData = array();
+		$response = new HttpSocketResponse();
+		$response->code = 200;
+		$response->body = json_encode(array('success' => true));
+		$response->headers['Content-Type'] = 'application/json; charset UTF-8';
+		$this->Source->expects($this->once())
+			->method('send')
+			->with($this->isInstanceOf('HttpSocket'), $this->isInstanceOf('Request'))
+			->will($this->returnValue($response));
+		$result = $this->Source->request($model, $method, $queryData, $postData);
+		$this->assertTrue($result['success']);
+	}
 
+	public function testUnauthorizedException() {
+		$this->setExpectedException('CakeException', 'Unauthorized Request from AppModel');
+		ClassRegistry::init('Copula.Token');
+		$Token = $this->getMock('Token', array('isExpired', 'find'));
+		$Token->useTable = false;
+		$Token->expects($this->exactly(2))
+			->method('isExpired')
+			->will($this->onConsecutiveCalls(true, true));
+		$this->Source->Token = $Token;
+		$this->Source->config['authorize'] = array(
+			'type' => 'Token'
+		);
+		$model = ClassRegistry::init('AppModel');
+		$result = $this->Source->request($model, 'GET', array(), array());
+	}
+
+	public function testNotFoundException() {
+		$this->setExpectedException('NotFoundException', 'Method POST not found at examplepath/endpoint.json');
+		$model = ClassRegistry::init('AppModel');
+		$model->useTable = 'examplepath/endpoint.json';
+		$result = $this->Source->request($model, 'POST', array(), array());
+	}
+
+	public function testInvalidRequestException() {
+		$this->setExpectedException('CakeException', 'Invalid request.');
+		$queryData['conditions'] = array(
+			'name' => 'Sir Exception!',
+			'date' => 'whenever'
+		);
+		$model = ClassRegistry::init('AppModel');
+		$model->useTable = 'examplepath/endpoint.json';
+		$result = $this->Source->request($model, 'GET', $queryData, array());
+	}
 }
