@@ -1,4 +1,4 @@
-#Integration Guide for Copula v0.1
+# Integration Guide for Copula v0.1
 
 Introduction by way of Disclaimer:
 
@@ -70,7 +70,7 @@ An example is given below:
 	);
 ```
 
-####Database Array Keys
+#### Database Array Keys
 
 <dl>
 <dt><b><code>datasource</code></b></dt>
