@@ -63,6 +63,16 @@ class OauthComponent extends Component {
 	function getOauthUri($apiName, $path, $extra = array()) {
 		if (Configure::check('Copula.' . $apiName . '.Auth')) {
 			$config = Configure::read('Copula.' . $apiName . '.Auth');
+			
+			if(!empty($config['callback']) && is_array($config['callback'])){
+				$config['callback'] = Router::url($config['callback']);
+			}
+			
+			//if a domain is passed into the options, override the default
+			if(!empty($extra['api_domain'])){
+				$config['host'] = $extra['api_domain'];
+			}
+			
 			if ($config['authMethod'] == 'OAuth') {
 				return $config['scheme'] . '://' . $config['host'] . '/' . $config[$path];
 			} elseif ($config['authMethod'] == 'OAuthV2') {
@@ -158,7 +168,7 @@ class OauthComponent extends Component {
 	 * @param string $apiName
 	 * @throws CakeException
 	 */
-	function callback($apiName) {
+	function callback($apiName, $api_domain = null) {
 		$method = $this->getOauthMethod($apiName);
 		if ($method == 'OAuthV2') {
 			$code = $this->controller->request->query('code');
@@ -167,9 +177,9 @@ class OauthComponent extends Component {
 			}
 			$accessToken = $this->getAccessTokenV2($apiName, $code);
 			if (!empty($accessToken)) {
-				return $this->_afterRequest($accessToken, $apiName, $method);
+				return $this->_afterRequest($accessToken, $apiName, $method, $api_domain);
 			} else {
-				throw new CakeException(__('Could not get OAuthV2 Access Token from %s', $apiName));
+				throw new CakeException(__('Could not get OAuthV2 Access Token from %s or Token already exists', $apiName));
 			}
 		} elseif ($method == 'OAuth') {
 			$verifier = $this->controller->request->query('oauth_verifier');
@@ -190,8 +200,8 @@ class OauthComponent extends Component {
 		}
 	}
 
-	protected function _afterRequest(array $accessToken, $apiName, $version) {
-		if ($this->store($accessToken, $apiName, $version)) {
+	protected function _afterRequest(array $accessToken, $apiName, $version, $api_domain = null) {
+		if ($this->store($accessToken, $apiName, $version, $api_domain)) {
 			if ($this->Session->check('Oauth.redirect')) {
 				$redirect = $this->Session->read('Oauth.redirect');
 				$this->Session->delete('Oauth.redirect');
@@ -200,7 +210,7 @@ class OauthComponent extends Component {
 				return $accessToken;
 			}
 		} else {
-			throw new CakeException(__('Could not store access token for API %s', $apiName));
+			throw new CakeException(__('Could not store access token for API %s Possibly already in db', $apiName));
 		}
 	}
 
@@ -210,11 +220,11 @@ class OauthComponent extends Component {
 	 * @param string|array $accessToken
 	 * @param string $tokenSecret
 	 */
-	public function store(array $accessToken, $apiName, $version) {
+	public function store(array $accessToken, $apiName, $version, $api_domain = null) {
 		$storageMethod = (empty($this->controller->Apis[$apiName]['store'])) ? 'Db' : ucfirst($this->controller->Apis[$apiName]['store']);
 		$Store = ClassRegistry::init('Copula.TokenStore' . $storageMethod);
 		if ($Store instanceof TokenStoreInterface) {
-			return $Store->saveToken($accessToken, $apiName, AuthComponent::user('id'), $version);
+			return $Store->saveToken($accessToken, $apiName, AuthComponent::user('id'), $version, $api_domain);
 		} else {
 			throw new CakeException(__('Storage Method: %s not supported.', $storageMethod));
 		}

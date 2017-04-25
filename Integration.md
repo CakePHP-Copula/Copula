@@ -89,7 +89,7 @@ For the purposes of this document, the hosts configuration file is assumed to be
 ```php
 
 	<?php
-	$config['Copula']['cloudprint']['Auth'] = array(
+	$config['Copula']['cloudprint']['path']['Auth'] = array(
 		'authMethod' => 'OAuthV2',
 		'scheme' => 'https',
 		'authorize' => 'o/oauth2/auth',
@@ -99,7 +99,7 @@ For the purposes of this document, the hosts configuration file is assumed to be
 		'callback' => 'https://example.com/oauth2callback/'
 	);
 
-	$config['Copula']['cloudprint']['Api'] = array(
+	$config['Copula']['cloudprint']['path']['Api'] = array(
 		'host' => 'www.google.com/cloudprint',
 		'authMethod' => 'OAuthV2'
 	);
